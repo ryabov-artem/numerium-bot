@@ -5,7 +5,6 @@ __pycache__/
 data/database.db
 logs/
 backups/
-data/tarot-api/
 
 # local backups
 *.bak
