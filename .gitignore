@@ -1,0 +1,17 @@
+venv/
+__pycache__/
+*.pyc
+.env
+data/database.db
+logs/
+backups/
+data/tarot-api/
+
+# local backups
+*.bak
+*.bak_*
+*.STABLE_*
+*.save
+app/*.bak*
+app/*.STABLE_*
+app/*.save
