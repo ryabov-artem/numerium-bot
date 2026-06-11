@@ -95,16 +95,11 @@ def get_main_keyboard(user_id):
 
 admin_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="👥 Пользователи")],
-        [KeyboardButton(text="📈 Статистика")],
-        [KeyboardButton(text="📜 Последние разборы")],
-        [KeyboardButton(text="📊 Популярность")],
-        [KeyboardButton(text="📣 Рассылка")],
-        [KeyboardButton(text="🎁 Акции")],
-        [KeyboardButton(text="📈 Воронка")],
-        [KeyboardButton(text="🏆 Топ")],
-        [KeyboardButton(text="➕ Начислить баланс")],
-        [KeyboardButton(text="➖ Списать баланс")],
+        [KeyboardButton(text="👥 Пользователи"), KeyboardButton(text="📈 Статистика")],
+        [KeyboardButton(text="📜 Последние разборы"), KeyboardButton(text="📊 Популярность")],
+        [KeyboardButton(text="📣 Рассылка"), KeyboardButton(text="🎁 Акции")],
+        [KeyboardButton(text="📈 Воронка"), KeyboardButton(text="🏆 Топ")],
+        [KeyboardButton(text="➕ Начислить баланс"), KeyboardButton(text="➖ Списать баланс")],
         [KeyboardButton(text="⬅️ Назад")]
     ],
     resize_keyboard=True
@@ -560,6 +555,8 @@ async def admin_panel(message: Message):
 
 @dp.message(F.text == "⬅️ Назад")
 async def back_to_main(message: Message):
+    clear_user_waiting_states(message.from_user.id)
+
     await message.answer(
         "Главное меню",
         reply_markup=get_main_keyboard(message.from_user.id)

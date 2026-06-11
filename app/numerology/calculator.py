@@ -2,11 +2,22 @@ from datetime import datetime
 
 
 def parse_birth_date(date_text: str) -> tuple[int, int, int]:
-    try:
-        dt = datetime.strptime(date_text.strip(), "%d.%m.%Y")
-        return dt.day, dt.month, dt.year
-    except ValueError:
+    value = date_text.strip()
+
+    if len(value) != 10 or value[2] != "." or value[5] != ".":
         raise ValueError("Дата должна быть в формате ДД.ММ.ГГГГ")
+
+    try:
+        dt = datetime.strptime(value, "%d.%m.%Y")
+    except ValueError:
+        raise ValueError("Такой даты не существует. Проверьте день, месяц и год.")
+
+    current_year = datetime.now().year
+
+    if dt.year < 1900 or dt.year > current_year:
+        raise ValueError(f"Год рождения должен быть в диапазоне 1900–{current_year}")
+
+    return dt.day, dt.month, dt.year
 
 
 def digit_sum(value: int) -> int:
