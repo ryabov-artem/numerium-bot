@@ -10,7 +10,6 @@ def get_connection():
 
 
 def ensure_payments_table():
-    ensure_payments_table()
 
     conn = get_connection()
     cursor = conn.cursor()
