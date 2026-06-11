@@ -64,10 +64,6 @@ session = AiohttpSession(proxy=PROXY_URL)
 bot = Bot(token=BOT_TOKEN, session=session)
 dp = Dispatcher()
 
-awaiting_three_card_question = set()
-awaiting_relationship_question = set()
-awaiting_career_question = set()
-awaiting_money_question = set()
 awaiting_destiny_number_date = set()
 awaiting_life_path_date = set()
 awaiting_compatibility_dates = set()
@@ -141,7 +137,7 @@ promo_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="🎁 Акция: 5 разборов")],
         [KeyboardButton(text="✨ Напомнить про личные качества")],
-        [KeyboardButton(text="💰 Скидка на разборы")],
+        [KeyboardButton(text="❤️ Напомнить про совместимость")],
         [KeyboardButton(text="⬅️ Назад")]
     ],
     resize_keyboard=True
@@ -200,12 +196,11 @@ async def start(message: Message):
         "Добро пожаловать!\n\n"
         "AI-разборы по классической нумерологии на основе даты рождения.\n\n"
         "Доступно:\n\n"
-        "✨ Личные качества\n"
+        "🔢 Число судьбы\n"
+        "🛣 Число жизненного пути\n"
         "❤️ Совместимость\n"
-        "👶 Личные качества\n"
-        "💰 Число жизненного пути\n"
-        "🎯 Предназначение\n"
-        "🔥 Предназначение\n\n"
+        "✨ Личные качества\n"
+        "🎯 Предназначение\n\n"
         "💎 Для новых пользователей доступен бесплатный разбор.\n\n"
         "Выберите интересующий раздел ниже 👇",
         reply_markup=get_main_keyboard(message.from_user.id)
@@ -267,17 +262,17 @@ async def balance(message: Message):
     balance_count = get_balance(message.from_user.id)
 
     await message.answer(
-        f"💎 Баланс\n\n"
-        f"На счету: {balance_count} разбор(ов)\n\n"
-        f"Один разбор открывает любой раздел на выбор:\n\n"
-        f"✨ Личные качества\n"
+        f"💎 <b>Баланс разборов</b>\n\n"
+        f"На счету: <b>{balance_count}</b> разбор(ов)\n\n"
+        f"Один разбор открывает один AI-анализ по классической нумерологии:\n\n"
+        f"🔢 Число судьбы\n"
+        f"🛣 Число жизненного пути\n"
         f"❤️ Совместимость\n"
-        f"👶 Личные качества\n"
-        f"💰 Число жизненного пути\n"
-        f"🎯 Предназначение\n"
-        f"🔥 Предназначение\n\n"
-        f"Пополните баланс и откройте новые разборы 👇",
-        reply_markup=shop_keyboard
+        f"✨ Личные качества\n"
+        f"🎯 Предназначение\n\n"
+        f"Первый разбор доступен бесплатно. После этого можно пополнить баланс.",
+        reply_markup=shop_keyboard,
+        parse_mode="HTML"
     )
 
 
@@ -681,10 +676,10 @@ async def promo_five_spreads(message: Message):
         return
 
     pending_broadcast[message.from_user.id] = (
-        "🎁 <b>Специальное предложение в Матрице судьбы</b>\n\n"
-        "Получите сразу <b>5 разборов</b> по выгодной цене — 299 ₽.\n\n"
-        "🔮 Можно использовать для вопросов про отношения, карьеру, деньги и личные ситуации.\n\n"
-        "Нажмите 💎 Баланс, чтобы пополнить запас разборов."
+        "🎁 <b>Специальное предложение</b>\n\n"
+        "Получите пакет из <b>5 нумерологических разборов</b> по выгодной цене.\n\n"
+        "Подходит для тех, кто хочет изучить разные стороны своей личности или проверить совместимость с близкими людьми.\n\n"
+        "✨ Больше возможностей для самопознания в одном пакете."
     )
 
     await message.answer(
@@ -702,9 +697,13 @@ async def promo_daily_card(message: Message):
         return
 
     pending_broadcast[message.from_user.id] = (
-        "✨ <b>Личные качества уже ждёт вас</b>\n\n"
-        "Откройте Матрицу судьбы и выберите подходящий разбор.\n\n"
-        "Один разбор может подсветить сильные стороны, отношения и направление движения ✨"
+        "✨ <b>А вы уже смотрели раздел «Личные качества»?</b>\n\n"
+        "Этот анализ помогает лучше понять:\n\n"
+        "• сильные стороны характера;\n"
+        "• особенности общения;\n"
+        "• внутренние ресурсы;\n"
+        "• направления для развития.\n\n"
+        "Введите дату рождения и получите персональный AI-разбор."
     )
 
     await message.answer(
@@ -716,22 +715,16 @@ async def promo_daily_card(message: Message):
     )
 
 
-@dp.message(F.text == "💰 Скидка на разборы")
-async def promo_discount(message: Message):
+@dp.message(F.text == "❤️ Напомнить про совместимость")
+async def promo_compatibility(message: Message):
     if message.from_user.id != ADMIN_ID:
         return
 
     pending_broadcast[message.from_user.id] = (
-        "💰 <b>Выгодный момент для разбора</b>\n\n"
-        "Пакет из <b>5 разборов</b> сейчас выгоднее, чем покупать по одному.\n\n"
-        "✨ Используйте разборы для:\n"
-        "• личной матрицы;\n"
-        "• совместимости;\n"
-        "• детской матрицы;\n"
-        "• денежного канала;\n"
-        "• предназначения;\n"
-        "• кармических задач.\n\n"
-        "Нажмите 💎 Баланс и выберите подходящий пакет."
+        "❤️ <b>Проверьте совместимость</b>\n\n"
+        "Введите две даты рождения и получите нумерологический анализ ваших сильных сторон как пары.\n\n"
+        "Раздел поможет взглянуть на отношения с новой стороны и лучше понять особенности взаимодействия друг с другом.\n\n"
+        "✨ Интересно как для романтических отношений, так и для дружбы."
     )
 
     await message.answer(
@@ -1180,45 +1173,9 @@ async def fallback(message: Message):
         )
         return
 
-    if user_id in awaiting_money_question:
-        awaiting_money_question.remove(user_id)
-        await process_spread(
-            message,
-            "Деньги",
-            "💰 Вытягиваю карты для денежного разбора...",
-            interpret_money_spread
-        )
-        return
 
-    if user_id in awaiting_career_question:
-        awaiting_career_question.remove(user_id)
-        await process_spread(
-            message,
-            "Карьера",
-            "💼 Вытягиваю карты для разбора предназначения...",
-            interpret_career_spread
-        )
-        return
 
-    if user_id in awaiting_relationship_question:
-        awaiting_relationship_question.remove(user_id)
-        await process_spread(
-            message,
-            "Отношения",
-            "❤️ Вытягиваю карты для разбора совместимости...",
-            interpret_relationship_spread
-        )
-        return
 
-    if user_id in awaiting_three_card_question:
-        awaiting_three_card_question.remove(user_id)
-        await process_spread(
-            message,
-            "Личные качества",
-            "🃏 Вытягиваю три карты...",
-            interpret_three_cards
-        )
-        return
 
     await message.answer("Нажми /start чтобы открыть меню.")
 
