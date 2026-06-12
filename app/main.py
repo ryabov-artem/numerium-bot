@@ -138,24 +138,24 @@ promo_keyboard = ReplyKeyboardMarkup(
 )
 
 
-def user_has_spread_access(user_id):
+async def user_has_spread_access(user_id):
     if user_id == ADMIN_ID:
         return True
 
-    if can_use_free_spread(user_id):
+    if await can_use_free_spread(user_id):
         return True
 
-    if get_balance(user_id) > 0:
+    if await get_balance(user_id) > 0:
         return True
 
     return False
 
 
-def charge_user_for_spread(user_id):
-    if can_use_free_spread(user_id):
-        mark_free_spread_used(user_id)
-    elif get_balance(user_id) > 0:
-        spend_balance(user_id)
+async def charge_user_for_spread(user_id):
+    if await can_use_free_spread(user_id):
+        await mark_free_spread_used(user_id)
+    elif await get_balance(user_id) > 0:
+        await spend_balance(user_id)
 
 
 def clear_user_waiting_states(user_id):
@@ -183,7 +183,7 @@ async def no_access_message(message: Message):
 
 @dp.message(CommandStart())
 async def start(message: Message):
-    save_user(message.from_user)
+    await save_user(message.from_user)
 
     await message.answer(
         "✨ Нумериум\n\n"
@@ -229,7 +229,7 @@ async def admin_give_balance(message: Message):
         await message.answer("COUNT должен быть больше 0.")
         return
 
-    add_balance(target_user_id, amount)
+    await add_balance(target_user_id, amount)
 
     await message.answer(
         f"✅ Начислено {amount} разбор(ов).\n"
@@ -251,9 +251,9 @@ async def admin_give_balance(message: Message):
 
 @dp.message(F.text == "💎 Баланс")
 async def balance(message: Message):
-    save_user(message.from_user)
+    await save_user(message.from_user)
 
-    balance_count = get_balance(message.from_user.id)
+    balance_count = await get_balance(message.from_user.id)
 
     await message.answer(
         f"💎 <b>Баланс разборов</b>\n\n"
@@ -407,10 +407,10 @@ async def buy_twenty_spreads(message: Message):
 
 @dp.message(F.text == "🔢 Число судьбы")
 async def numerology_destiny_number(message: Message):
-    save_user(message.from_user)
+    await save_user(message.from_user)
     user_id = message.from_user.id
 
-    if not user_has_spread_access(user_id):
+    if not await user_has_spread_access(user_id):
         await no_access_message(message)
         return
 
@@ -427,10 +427,10 @@ async def numerology_destiny_number(message: Message):
 
 @dp.message(F.text == "🛣 Число жизненного пути")
 async def numerology_life_path(message: Message):
-    save_user(message.from_user)
+    await save_user(message.from_user)
     user_id = message.from_user.id
 
-    if not user_has_spread_access(user_id):
+    if not await user_has_spread_access(user_id):
         await no_access_message(message)
         return
 
@@ -447,10 +447,10 @@ async def numerology_life_path(message: Message):
 
 @dp.message(F.text == "❤️ Совместимость")
 async def numerology_compatibility(message: Message):
-    save_user(message.from_user)
+    await save_user(message.from_user)
     user_id = message.from_user.id
 
-    if not user_has_spread_access(user_id):
+    if not await user_has_spread_access(user_id):
         await no_access_message(message)
         return
 
@@ -468,10 +468,10 @@ async def numerology_compatibility(message: Message):
 
 @dp.message(F.text == "✨ Личные качества")
 async def numerology_personal_qualities(message: Message):
-    save_user(message.from_user)
+    await save_user(message.from_user)
     user_id = message.from_user.id
 
-    if not user_has_spread_access(user_id):
+    if not await user_has_spread_access(user_id):
         await no_access_message(message)
         return
 
@@ -488,10 +488,10 @@ async def numerology_personal_qualities(message: Message):
 
 @dp.message(F.text == "🎯 Предназначение")
 async def numerology_purpose(message: Message):
-    save_user(message.from_user)
+    await save_user(message.from_user)
     user_id = message.from_user.id
 
-    if not user_has_spread_access(user_id):
+    if not await user_has_spread_access(user_id):
         await no_access_message(message)
         return
 
@@ -508,9 +508,9 @@ async def numerology_purpose(message: Message):
 
 @dp.message(F.text == "📜 История")
 async def history(message: Message):
-    save_user(message.from_user)
+    await save_user(message.from_user)
 
-    spreads = get_user_spreads(message.from_user.id, limit=5)
+    spreads = await get_user_spreads(message.from_user.id, limit=5)
 
     if not spreads:
         await message.answer(
@@ -570,8 +570,8 @@ async def admin_stats(message: Message):
 
     await message.answer(
         "📈 Статистика Numerium\n\n"
-        f"👥 Пользователей: {get_users_count()}\n"
-        f"📜 Разборов: {get_spreads_count()}\n"
+        f"👥 Пользователей: {await get_users_count()}\n"
+        f"📜 Разборов: {await get_spreads_count()}\n"
         f"💎 Формат: платные разборы по балансу"
     )
 
@@ -582,7 +582,7 @@ async def admin_users(message: Message):
         await message.answer("Нет доступа.")
         return
 
-    users = get_recent_users(limit=10)
+    users = await get_recent_users(limit=10)
 
     if not users:
         await message.answer("Пользователей пока нет.")
@@ -610,7 +610,7 @@ async def admin_recent_spreads(message: Message):
         await message.answer("Нет доступа.")
         return
 
-    spreads = get_recent_spreads(limit=10)
+    spreads = await get_recent_spreads(limit=10)
 
     if not spreads:
         await message.answer("Разборов пока нет.")
@@ -639,7 +639,7 @@ async def admin_popularity(message: Message):
         await message.answer("Нет доступа.")
         return
 
-    stats = get_spread_type_stats()
+    stats = await get_spread_type_stats()
 
     if not stats:
         await message.answer("📊 Пока нет данных по разборам.")
@@ -739,7 +739,7 @@ async def admin_sales_funnel(message: Message):
         await message.answer("Нет доступа.")
         return
 
-    funnel = get_sales_funnel()
+    funnel = await get_sales_funnel()
 
     await message.answer(
         "📈 Воронка продаж\n\n"
@@ -761,7 +761,7 @@ async def admin_top_users(message: Message):
         await message.answer("Нет доступа.")
         return
 
-    data = get_top_users(10)
+    data = await get_top_users(10)
 
     text = "🏆 Топ пользователей\n\n"
 
@@ -813,7 +813,7 @@ async def confirm_broadcast(message: Message):
         return
 
     text_to_send = pending_broadcast.pop(user_id)
-    user_ids = get_all_user_ids()
+    user_ids = await get_all_user_ids()
 
     success = 0
     failed = 0
@@ -891,7 +891,7 @@ async def admin_balance_grant_process(message: Message):
         await message.answer("Количество должно быть больше 0.", reply_markup=admin_keyboard)
         return
 
-    add_balance(target_user_id, amount)
+    await add_balance(target_user_id, amount)
 
     await message.answer(
         f"✅ Начислено {amount} разбор(ов).\nПользователь: {target_user_id}",
@@ -924,7 +924,7 @@ async def admin_balance_writeoff_process(message: Message):
         await message.answer("Количество должно быть больше 0.", reply_markup=admin_keyboard)
         return
 
-    current_balance = get_balance(target_user_id)
+    current_balance = await get_balance(target_user_id)
 
     if current_balance < amount:
         await message.answer(
@@ -934,7 +934,7 @@ async def admin_balance_writeoff_process(message: Message):
         return
 
     for _ in range(amount):
-        spend_balance(target_user_id)
+        await spend_balance(target_user_id)
 
     await message.answer(
         f"✅ Списано {amount} разбор(ов).\nПользователь: {target_user_id}",
@@ -978,7 +978,7 @@ async def fallback(message: Message):
             await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
             return
 
-        save_spread(
+        await save_spread(
             user_id=user_id,
             spread_type="Число судьбы",
             question=data["birth_date"],
@@ -986,7 +986,7 @@ async def fallback(message: Message):
             answer=interpretation
         )
 
-        charge_user_for_spread(user_id)
+        await charge_user_for_spread(user_id)
 
         await message.answer(
             f"🔢 <b>Число судьбы</b>\n\n"
@@ -1018,7 +1018,7 @@ async def fallback(message: Message):
             await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
             return
 
-        save_spread(
+        await save_spread(
             user_id=user_id,
             spread_type="Число жизненного пути",
             question=data["birth_date"],
@@ -1026,7 +1026,7 @@ async def fallback(message: Message):
             answer=interpretation
         )
 
-        charge_user_for_spread(user_id)
+        await charge_user_for_spread(user_id)
 
         await message.answer(
             f"🛣 <b>Число жизненного пути</b>\n\n"
@@ -1070,7 +1070,7 @@ async def fallback(message: Message):
             await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
             return
 
-        save_spread(
+        await save_spread(
             user_id=user_id,
             spread_type="Совместимость",
             question=f"{data['date1']} + {data['date2']}",
@@ -1078,7 +1078,7 @@ async def fallback(message: Message):
             answer=interpretation
         )
 
-        charge_user_for_spread(user_id)
+        await charge_user_for_spread(user_id)
 
         await message.answer(
             f"❤️ <b>Совместимость</b>\n\n"
@@ -1111,7 +1111,7 @@ async def fallback(message: Message):
             await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
             return
 
-        save_spread(
+        await save_spread(
             user_id=user_id,
             spread_type="Личные качества",
             question=data["birth_date"],
@@ -1119,7 +1119,7 @@ async def fallback(message: Message):
             answer=interpretation
         )
 
-        charge_user_for_spread(user_id)
+        await charge_user_for_spread(user_id)
 
         await message.answer(
             f"✨ <b>Личные качества</b>\n\n"
@@ -1156,7 +1156,7 @@ async def fallback(message: Message):
             await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
             return
 
-        save_spread(
+        await save_spread(
             user_id=user_id,
             spread_type="Предназначение",
             question=data["birth_date"],
@@ -1164,7 +1164,7 @@ async def fallback(message: Message):
             answer=interpretation
         )
 
-        charge_user_for_spread(user_id)
+        await charge_user_for_spread(user_id)
 
         await message.answer(
             f"🎯 <b>Предназначение</b>\n\n"
