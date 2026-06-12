@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime, date
+from datetime import datetime
 
 DB_FILE = "/opt/bots/numerium_bot/data/database.db"
 
@@ -41,17 +41,6 @@ def init_db():
     )
     """)
 
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS daily_cards (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
-        card_name TEXT,
-        orientation TEXT,
-        interpretation TEXT,
-        created_date TEXT,
-        created_at TEXT
-    )
-    """)
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS user_balance (
@@ -88,61 +77,6 @@ def save_user(user):
         user.id,
         user.username,
         user.first_name,
-        datetime.now().isoformat()
-    ))
-
-    conn.commit()
-    conn.close()
-
-
-def get_today_card(user_id):
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    today = date.today().isoformat()
-
-    cursor.execute("""
-    SELECT card_name, orientation, interpretation
-    FROM daily_cards
-    WHERE user_id = ?
-    AND created_date = ?
-    LIMIT 1
-    """, (user_id, today))
-
-    row = cursor.fetchone()
-    conn.close()
-
-    if row:
-        return {
-            "name": row[0],
-            "orientation": row[1],
-            "interpretation": row[2]
-        }
-
-    return None
-
-
-def save_daily_card(user_id, card, interpretation):
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    INSERT INTO daily_cards
-    (
-        user_id,
-        card_name,
-        orientation,
-        interpretation,
-        created_date,
-        created_at
-    )
-    VALUES (?, ?, ?, ?, ?, ?)
-    """, (
-        user_id,
-        card["name"],
-        card["orientation"],
-        interpretation,
-        date.today().isoformat(),
         datetime.now().isoformat()
     ))
 
@@ -224,15 +158,6 @@ def get_users_count():
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT COUNT(*) FROM users")
-    count = cursor.fetchone()[0]
-    conn.close()
-    return count
-
-
-def get_daily_cards_count():
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM daily_cards")
     count = cursor.fetchone()[0]
     conn.close()
     return count

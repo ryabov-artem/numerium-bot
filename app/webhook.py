@@ -1,12 +1,9 @@
 import os
-import sqlite3
-import aiohttp
+import aiosqlite
 from aiohttp import web
 from aiogram import Bot
 from aiogram.client.session.aiohttp import AiohttpSession
 from dotenv import load_dotenv
-
-from database import add_balance, get_balance, save_payment
 
 load_dotenv("/opt/bots/numerium_bot/.env")
 
@@ -15,39 +12,78 @@ PROXY_URL = os.getenv("PROXY_URL")
 DB_FILE = "/opt/bots/numerium_bot/data/database.db"
 
 
-def init_payments_table():
-    conn = sqlite3.connect(DB_FILE)
-    cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS processed_payments (
-            payment_id TEXT PRIMARY KEY,
-            user_id INTEGER,
-            count INTEGER,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+async def init_payments_table():
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS processed_payments (
+                payment_id TEXT PRIMARY KEY,
+                user_id INTEGER,
+                count INTEGER,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS payments (
+                payment_id TEXT PRIMARY KEY,
+                user_id INTEGER,
+                amount REAL,
+                spreads_added INTEGER,
+                created_at TEXT
+            )
+        """)
+        await db.commit()
+
+
+async def payment_already_processed(payment_id):
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT payment_id FROM processed_payments WHERE payment_id = ?",
+            (payment_id,)
+        ) as cursor:
+            row = await cursor.fetchone()
+            return row is not None
+
+
+async def mark_payment_processed(payment_id, user_id, count):
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            "INSERT OR IGNORE INTO processed_payments (payment_id, user_id, count) VALUES (?, ?, ?)",
+            (payment_id, user_id, count)
         )
-    """)
-    conn.commit()
-    conn.close()
+        await db.commit()
 
 
-def payment_already_processed(payment_id):
-    conn = sqlite3.connect(DB_FILE)
-    cur = conn.cursor()
-    cur.execute("SELECT payment_id FROM processed_payments WHERE payment_id = ?", (payment_id,))
-    row = cur.fetchone()
-    conn.close()
-    return row is not None
+async def add_balance_async(user_id, amount):
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute(
+            "INSERT OR IGNORE INTO user_balance(user_id, spreads) VALUES (?, 0)",
+            (user_id,)
+        )
+        await db.execute(
+            "UPDATE user_balance SET spreads = spreads + ? WHERE user_id = ?",
+            (amount, user_id)
+        )
+        await db.commit()
 
 
-def mark_payment_processed(payment_id, user_id, count):
-    conn = sqlite3.connect(DB_FILE)
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT OR IGNORE INTO processed_payments (payment_id, user_id, count) VALUES (?, ?, ?)",
-        (payment_id, user_id, count)
-    )
-    conn.commit()
-    conn.close()
+async def get_balance_async(user_id):
+    async with aiosqlite.connect(DB_FILE) as db:
+        async with db.execute(
+            "SELECT spreads FROM user_balance WHERE user_id = ?",
+            (user_id,)
+        ) as cursor:
+            row = await cursor.fetchone()
+            return row[0] if row else 0
+
+
+async def save_payment_async(payment_id, user_id, amount, spreads_added):
+    async with aiosqlite.connect(DB_FILE) as db:
+        await db.execute("""
+            INSERT OR IGNORE INTO payments
+            (payment_id, user_id, amount, spreads_added, created_at)
+            VALUES (?, ?, ?, ?, datetime('now', 'localtime'))
+        """, (payment_id, user_id, amount, spreads_added))
+        await db.commit()
 
 
 async def send_telegram_message(user_id, text):
@@ -66,7 +102,10 @@ async def send_telegram_message(user_id, text):
 
 
 async def yookassa_webhook(request):
-    data = await request.json()
+    try:
+        data = await request.json()
+    except Exception:
+        return web.json_response({"ok": False, "error": "invalid_json"}, status=400)
 
     event = data.get("event")
     obj = data.get("object", {})
@@ -77,18 +116,24 @@ async def yookassa_webhook(request):
     payment_id = obj.get("id")
     metadata = obj.get("metadata") or {}
 
-    user_id = int(metadata.get("user_id"))
-    count = int(metadata.get("count"))
-    amount_rub = float((obj.get("amount") or {}).get("value", 0))
+    try:
+        user_id = int(metadata.get("user_id"))
+        count = int(metadata.get("count"))
+        amount_rub = float((obj.get("amount") or {}).get("value", 0))
+    except (TypeError, ValueError):
+        return web.json_response({"ok": False, "error": "bad_metadata"}, status=400)
 
-    if payment_already_processed(payment_id):
+    if not payment_id:
+        return web.json_response({"ok": False, "error": "missing_payment_id"}, status=400)
+
+    if await payment_already_processed(payment_id):
         return web.json_response({"ok": True, "status": "already_processed"})
 
-    add_balance(user_id, count)
-    mark_payment_processed(payment_id, user_id, count)
-    save_payment(payment_id, user_id, amount_rub, count)
+    await add_balance_async(user_id, count)
+    await mark_payment_processed(payment_id, user_id, count)
+    await save_payment_async(payment_id, user_id, amount_rub, count)
 
-    balance = get_balance(user_id)
+    balance = await get_balance_async(user_id)
 
     await send_telegram_message(
         user_id,
@@ -111,10 +156,14 @@ async def health(request):
     return web.Response(text="OK")
 
 
+async def on_startup(app):
+    await init_payments_table()
+
+
 app = web.Application()
+app.on_startup.append(on_startup)
 app.router.add_get("/health", health)
 app.router.add_post("/yookassa/webhook", yookassa_webhook)
 
 if __name__ == "__main__":
-    init_payments_table()
     web.run_app(app, host="127.0.0.1", port=8083)

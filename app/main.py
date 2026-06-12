@@ -14,12 +14,9 @@ from ai import (
 from database import (
     init_db,
     save_user,
-    get_today_card,
-    save_daily_card,
     save_spread,
     get_user_spreads,
     get_users_count,
-    get_daily_cards_count,
     get_spreads_count,
     get_recent_spreads,
     get_recent_users,
@@ -689,7 +686,7 @@ async def promo_five_spreads(message: Message):
 
 
 @dp.message(F.text == "✨ Напомнить про личные качества")
-async def promo_daily_card(message: Message):
+async def promo_personal_qualities(message: Message):
     if message.from_user.id != ADMIN_ID:
         return
 
