@@ -73,7 +73,9 @@ pending_broadcast = {}
 
 
 def markdown_bold_to_html(text):
-    return re.sub(r"\*\*(.*?)\*\*", r"<b>\1</b>", text)
+    text = re.sub(r"\*\*(.*?)\*\*", r"<b>\1</b>", text)
+    text = text.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
+    return text
 
 
 def get_main_keyboard(user_id):
