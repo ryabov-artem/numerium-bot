@@ -121,7 +121,7 @@ numerium-webhook.service
 ## Дорожная карта сети
 
 1. 🔮 Арканум — Production
-2. ✨ Матрица судьбы — Production
+2. 🔢 Нумериум — In development
 3. 🔢 Нумериум — MVP
 4. ⭐ Астрология
 5. 🕉 Ведическая астрология
