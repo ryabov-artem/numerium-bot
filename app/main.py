@@ -105,6 +105,7 @@ admin_keyboard = ReplyKeyboardMarkup(
         [KeyboardButton(text="👥 Пользователи"), KeyboardButton(text="📈 Статистика")],
         [KeyboardButton(text="📜 Последние разборы"), KeyboardButton(text="📊 Популярность")],
         [KeyboardButton(text="📣 Рассылка"), KeyboardButton(text="🎁 Акции")],
+        [KeyboardButton(text="💰 Платежи")],
         [KeyboardButton(text="📈 Воронка"), KeyboardButton(text="🏆 Топ")],
         [KeyboardButton(text="➕ Начислить баланс"), KeyboardButton(text="➖ Списать баланс")],
         [KeyboardButton(text="⬅️ Назад")]
@@ -650,6 +651,49 @@ async def admin_popularity(message: Message):
 
     await message.answer(text)
 
+
+
+
+
+@dp.message(F.text == "💰 Платежи")
+async def admin_payments(message: Message):
+    if message.from_user.id != ADMIN_ID:
+        await message.answer("Нет доступа.")
+        return
+
+    stats = await get_payments_stats()
+    payments = await get_recent_payments(limit=10)
+
+    text = (
+        "💰 <b>Платежи</b>\n\n"
+        f"📅 <b>Сегодня</b>\n"
+        f"• Платежей: <b>{stats['today_count']}</b>\n"
+        f"• Сумма: <b>{stats['today_amount']} ₽</b>\n"
+        f"• Разборов куплено: <b>{stats['today_spreads']}</b>\n\n"
+        f"📊 <b>Всего</b>\n"
+        f"• Платежей: <b>{stats['total_count']}</b>\n"
+        f"• Сумма: <b>{stats['total_amount']} ₽</b>\n"
+        f"• Разборов куплено: <b>{stats['total_spreads']}</b>\n\n"
+    )
+
+    if payments:
+        text += "🧾 <b>Последние 10 платежей</b>\n\n"
+
+        for payment in payments:
+            username = payment["username"] or "без username"
+            first_name = payment["first_name"] or "без имени"
+
+            text += (
+                f"👤 {first_name} / @{username}\n"
+                f"ID: <code>{payment['user_id']}</code>\n"
+                f"Сумма: <b>{payment['amount']} ₽</b>\n"
+                f"Разборов: <b>{payment['spreads_added']}</b>\n"
+                f"Дата: {payment['created_at']}\n\n"
+            )
+    else:
+        text += "Платежей пока нет."
+
+    await message.answer(text, parse_mode="HTML")
 
 
 @dp.message(F.text == "🎁 Акции")
