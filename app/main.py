@@ -970,7 +970,8 @@ async def fallback(message: Message):
         await message.answer("🔢 Рассчитываю число судьбы...")
 
         try:
-            interpretation = interpret_destiny_number(data)
+            await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+            interpretation = await interpret_destiny_number(data)
         except Exception as e:
             await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
             return
@@ -1009,7 +1010,8 @@ async def fallback(message: Message):
         await message.answer("🛣 Рассчитываю число жизненного пути...")
 
         try:
-            interpretation = interpret_life_path(data)
+            await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+            interpretation = await interpret_life_path(data)
         except Exception as e:
             await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
             return
@@ -1060,7 +1062,8 @@ async def fallback(message: Message):
         await message.answer("❤️ Рассчитываю совместимость...")
 
         try:
-            interpretation = interpret_compatibility(data)
+            await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+            interpretation = await interpret_compatibility(data)
         except Exception as e:
             await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
             return
@@ -1100,7 +1103,8 @@ async def fallback(message: Message):
         await message.answer("✨ Рассчитываю личные качества...")
 
         try:
-            interpretation = interpret_personal_qualities(data)
+            await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+            interpretation = await interpret_personal_qualities(data)
         except Exception as e:
             await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
             return
@@ -1144,7 +1148,8 @@ async def fallback(message: Message):
         await message.answer("🎯 Рассчитываю предназначение...")
 
         try:
-            interpretation = interpret_purpose(data)
+            await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+            interpretation = await interpret_purpose(data)
         except Exception as e:
             await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
             return
