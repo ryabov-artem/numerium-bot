@@ -28,11 +28,17 @@ async def init_db():
             user_id INTEGER,
             spread_type TEXT,
             question TEXT,
-            cards TEXT,
+            input_data TEXT,
             answer TEXT,
             created_at TEXT
         )
         """)
+
+        cursor = await db.execute("PRAGMA table_info(spreads)")
+        columns = [row[1] for row in await cursor.fetchall()]
+
+        if "cards" in columns and "input_data" not in columns:
+            await db.execute("ALTER TABLE spreads RENAME COLUMN cards TO input_data")
 
         await db.execute("""
         CREATE TABLE IF NOT EXISTS user_limits (
@@ -49,6 +55,15 @@ async def init_db():
             amount REAL,
             spreads_added INTEGER,
             created_at TEXT
+        )
+        """)
+
+        await db.execute("""
+        CREATE TABLE IF NOT EXISTS processed_payments (
+            payment_id TEXT PRIMARY KEY,
+            user_id INTEGER,
+            count INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
         """)
 
@@ -74,22 +89,17 @@ async def save_user(user):
         await db.commit()
 
 
-async def save_spread(user_id, spread_type, question, cards, answer):
-    cards_text = "; ".join([
-        f"{card['name']} ({card['orientation']})"
-        for card in cards
-    ]) if cards else ""
-
+async def save_spread(user_id, spread_type, question, input_data, answer):
     async with aiosqlite.connect(DB_FILE) as db:
         await db.execute("""
         INSERT INTO spreads
-        (user_id, spread_type, question, cards, answer, created_at)
+        (user_id, spread_type, question, input_data, answer, created_at)
         VALUES (?, ?, ?, ?, ?, ?)
         """, (
             user_id,
             spread_type,
             question,
-            cards_text,
+            input_data,
             answer,
             datetime.now().isoformat()
         ))
@@ -99,7 +109,7 @@ async def save_spread(user_id, spread_type, question, cards, answer):
 async def get_user_spreads(user_id, limit=5):
     async with aiosqlite.connect(DB_FILE) as db:
         cursor = await db.execute("""
-        SELECT id, spread_type, question, cards, answer, created_at
+        SELECT id, spread_type, question, input_data, answer, created_at
         FROM spreads
         WHERE user_id = ?
         ORDER BY id DESC
@@ -112,7 +122,7 @@ async def get_user_spreads(user_id, limit=5):
             "id": row[0],
             "spread_type": row[1],
             "question": row[2],
-            "cards": row[3],
+            "input_data": row[3],
             "answer": row[4],
             "created_at": row[5]
         }
@@ -144,7 +154,7 @@ async def get_recent_spreads(limit=10):
             users.first_name,
             spreads.spread_type,
             spreads.question,
-            spreads.cards,
+            spreads.input_data,
             spreads.created_at
         FROM spreads
         LEFT JOIN users ON users.user_id = spreads.user_id
@@ -161,7 +171,7 @@ async def get_recent_spreads(limit=10):
             "first_name": row[3],
             "spread_type": row[4],
             "question": row[5],
-            "cards": row[6],
+            "input_data": row[6],
             "created_at": row[7]
         }
         for row in rows
@@ -191,20 +201,12 @@ async def get_recent_users(limit=10):
 
 async def can_use_free_spread(user_id):
     async with aiosqlite.connect(DB_FILE) as db:
-        await db.execute("""
-        CREATE TABLE IF NOT EXISTS user_limits (
-            user_id INTEGER PRIMARY KEY,
-            free_spread_used INTEGER DEFAULT 0,
-            paid_spreads INTEGER DEFAULT 0
-        )
-        """)
         cursor = await db.execute("""
         SELECT free_spread_used
         FROM user_limits
         WHERE user_id = ?
         """, (user_id,))
         row = await cursor.fetchone()
-        await db.commit()
 
     if row is None:
         return True

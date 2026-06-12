@@ -57,7 +57,7 @@ if YOOKASSA_SHOP_ID and YOOKASSA_SECRET_KEY:
     Configuration.account_id = YOOKASSA_SHOP_ID
     Configuration.secret_key = YOOKASSA_SECRET_KEY
 
-ADMIN_ID = 185955220
+ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 
 session = AiohttpSession(proxy=PROXY_URL)
 bot = Bot(token=BOT_TOKEN, session=session)
@@ -524,7 +524,7 @@ async def history(message: Message):
         text += (
             f"✨ #{spread['id']} — {spread['spread_type']}\n"
             f"Вопрос: {spread['question']}\n"
-            f"Данные: {spread['cards']}\n\n"
+            f"Данные: {spread['input_data']}\n\n"
         )
 
     await message.answer(text)
@@ -877,19 +877,6 @@ async def admin_broadcast_start(message: Message, state: FSMContext):
 
 
 
-async def process_spread(message: Message, spread_type, intro_text, interpret_func):
-    await message.answer(
-        "✨ <b>Выберите раздел в меню</b>\n\n"
-        "В Нумериуме доступны основные нумерологические разборы:\n"
-        "🔢 Число судьбы\n"
-        "🛣 Число жизненного пути\n"
-        "❤️ Совместимость\n"
-        "✨ Личные качества\n"
-        "🎯 Предназначение",
-        parse_mode="HTML"
-    )
-
-
 
 @dp.message(F.text == "➕ Начислить баланс")
 async def admin_balance_grant_start(message: Message, state: FSMContext):
@@ -1075,7 +1062,7 @@ async def process_destiny_number_date(message: Message, state: FSMContext):
         user_id=user_id,
         spread_type="Число судьбы",
         question=data["birth_date"],
-        cards=[],
+        input_data=data["birth_date"],
         answer=interpretation
     )
 
@@ -1116,7 +1103,7 @@ async def process_life_path_date(message: Message, state: FSMContext):
         user_id=user_id,
         spread_type="Число жизненного пути",
         question=data["birth_date"],
-        cards=[],
+        input_data=data["birth_date"],
         answer=interpretation
     )
 
@@ -1166,7 +1153,7 @@ async def process_compatibility_dates(message: Message, state: FSMContext):
         user_id=user_id,
         spread_type="Совместимость",
         question=f"{data['date1']} + {data['date2']}",
-        cards=[],
+        input_data=f"{data['date1']} + {data['date2']}",
         answer=interpretation
     )
 
@@ -1208,7 +1195,7 @@ async def process_personal_qualities_date(message: Message, state: FSMContext):
         user_id=user_id,
         spread_type="Личные качества",
         question=data["birth_date"],
-        cards=[],
+        input_data=data["birth_date"],
         answer=interpretation
     )
 
@@ -1254,7 +1241,7 @@ async def process_purpose_date(message: Message, state: FSMContext):
         user_id=user_id,
         spread_type="Предназначение",
         question=data["birth_date"],
-        cards=[],
+        input_data=data["birth_date"],
         answer=interpretation
     )
 
