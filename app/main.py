@@ -521,16 +521,27 @@ async def history(message: Message):
         )
         return
 
-    text = "📜 Последние разборы:\n\n"
+    text = "📜 <b>История разборов</b>\n\n"
 
-    for spread in spreads:
+    emoji_map = {
+        "Число судьбы": "🔢",
+        "Число жизненного пути": "🛣",
+        "Совместимость": "❤️",
+        "Личные качества": "✨",
+        "Предназначение": "🎯",
+    }
+
+    for idx, spread in enumerate(spreads, start=1):
+        spread_type = spread.get("spread_type", "Разбор")
+        question = spread.get("question") or spread.get("input_data") or "—"
+        emoji = emoji_map.get(spread_type, "🔢")
+
         text += (
-            f"✨ #{spread['id']} — {spread['spread_type']}\n"
-            f"Вопрос: {spread['question']}\n"
-            f"Данные: {spread['input_data']}\n\n"
+            f"{idx}. {emoji} <b>{spread_type}</b>\n"
+            f"📅 {question}\n\n"
         )
 
-    await message.answer(text)
+    await message.answer(text, parse_mode="HTML")
 
 
 @dp.message(F.text == "ℹ️ О боте")
