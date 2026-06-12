@@ -2,6 +2,7 @@ import asyncio
 import os
 import uuid
 import re
+import html
 
 from ai import (
     interpret_destiny_number,
@@ -81,17 +82,18 @@ class NumerologyStates(StatesGroup):
 
 
 def markdown_bold_to_html(text):
-    text = re.sub(r"\*\*(.*?)\*\*", r"<b>\1</b>", text)
     text = text.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
+    text = html.escape(text, quote=False)
+    text = re.sub(r"\*\*(.*?)\*\*", r"<b>\1</b>", text)
     return text
-
 
 def get_main_keyboard(user_id):
     keyboard = [
         [KeyboardButton(text="🔢 Число судьбы"), KeyboardButton(text="🛣 Число жизненного пути")],
         [KeyboardButton(text="❤️ Совместимость"), KeyboardButton(text="✨ Личные качества")],
         [KeyboardButton(text="🎯 Предназначение")],
-        [KeyboardButton(text="💎 Баланс"), KeyboardButton(text="ℹ️ О боте")]
+        [KeyboardButton(text="💎 Баланс"), KeyboardButton(text="📜 История")],
+        [KeyboardButton(text="ℹ️ О боте")]
     ]
 
     if user_id == ADMIN_ID:

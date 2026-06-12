@@ -34,11 +34,6 @@ async def init_db():
         )
         """)
 
-        cursor = await db.execute("PRAGMA table_info(spreads)")
-        columns = [row[1] for row in await cursor.fetchall()]
-
-        if "cards" in columns and "input_data" not in columns:
-            await db.execute("ALTER TABLE spreads RENAME COLUMN cards TO input_data")
 
         await db.execute("""
         CREATE TABLE IF NOT EXISTS user_limits (
