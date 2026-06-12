@@ -39,6 +39,8 @@ from aiogram import Bot, Dispatcher, F
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.filters import CommandStart
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, FSInputFile, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.context import FSMContext
 from dotenv import load_dotenv
 from yookassa import Configuration, Payment
 
@@ -68,11 +70,14 @@ class AdminStates(StatesGroup):
     awaiting_balance_writeoff = State()
 
 
-awaiting_destiny_number_date = set()
-awaiting_life_path_date = set()
-awaiting_compatibility_dates = set()
-awaiting_personal_qualities_date = set()
-awaiting_purpose_date = set()
+class NumerologyStates(StatesGroup):
+    awaiting_destiny_number_date = State()
+    awaiting_life_path_date = State()
+    awaiting_compatibility_dates = State()
+    awaiting_personal_qualities_date = State()
+    awaiting_purpose_date = State()
+
+
 
 
 def markdown_bold_to_html(text):
@@ -161,12 +166,6 @@ async def charge_user_for_spread(user_id):
         await spend_balance(user_id)
 
 
-def clear_user_waiting_states(user_id):
-    awaiting_destiny_number_date.discard(user_id)
-    awaiting_life_path_date.discard(user_id)
-    awaiting_compatibility_dates.discard(user_id)
-    awaiting_personal_qualities_date.discard(user_id)
-    awaiting_purpose_date.discard(user_id)
 
 
 async def no_access_message(message: Message):
@@ -406,7 +405,7 @@ async def buy_twenty_spreads(message: Message):
 
 
 @dp.message(F.text == "🔢 Число судьбы")
-async def numerology_destiny_number(message: Message):
+async def numerology_destiny_number(message: Message, state: FSMContext):
     await save_user(message.from_user)
     user_id = message.from_user.id
 
@@ -414,8 +413,8 @@ async def numerology_destiny_number(message: Message):
         await no_access_message(message)
         return
 
-    clear_user_waiting_states(user_id)
-    awaiting_destiny_number_date.add(user_id)
+    await state.clear()
+    await state.set_state(NumerologyStates.awaiting_destiny_number_date)
 
     await message.answer(
         "🔢 <b>Число судьбы</b>\n\n"
@@ -426,7 +425,7 @@ async def numerology_destiny_number(message: Message):
 
 
 @dp.message(F.text == "🛣 Число жизненного пути")
-async def numerology_life_path(message: Message):
+async def numerology_life_path(message: Message, state: FSMContext):
     await save_user(message.from_user)
     user_id = message.from_user.id
 
@@ -434,8 +433,8 @@ async def numerology_life_path(message: Message):
         await no_access_message(message)
         return
 
-    clear_user_waiting_states(user_id)
-    awaiting_life_path_date.add(user_id)
+    await state.clear()
+    await state.set_state(NumerologyStates.awaiting_life_path_date)
 
     await message.answer(
         "🛣 <b>Число жизненного пути</b>\n\n"
@@ -446,7 +445,7 @@ async def numerology_life_path(message: Message):
 
 
 @dp.message(F.text == "❤️ Совместимость")
-async def numerology_compatibility(message: Message):
+async def numerology_compatibility(message: Message, state: FSMContext):
     await save_user(message.from_user)
     user_id = message.from_user.id
 
@@ -454,8 +453,8 @@ async def numerology_compatibility(message: Message):
         await no_access_message(message)
         return
 
-    clear_user_waiting_states(user_id)
-    awaiting_compatibility_dates.add(user_id)
+    await state.clear()
+    await state.set_state(NumerologyStates.awaiting_compatibility_dates)
 
     await message.answer(
         "❤️ <b>Совместимость</b>\n\n"
@@ -467,7 +466,7 @@ async def numerology_compatibility(message: Message):
 
 
 @dp.message(F.text == "✨ Личные качества")
-async def numerology_personal_qualities(message: Message):
+async def numerology_personal_qualities(message: Message, state: FSMContext):
     await save_user(message.from_user)
     user_id = message.from_user.id
 
@@ -475,8 +474,8 @@ async def numerology_personal_qualities(message: Message):
         await no_access_message(message)
         return
 
-    clear_user_waiting_states(user_id)
-    awaiting_personal_qualities_date.add(user_id)
+    await state.clear()
+    await state.set_state(NumerologyStates.awaiting_personal_qualities_date)
 
     await message.answer(
         "✨ <b>Личные качества</b>\n\n"
@@ -487,7 +486,7 @@ async def numerology_personal_qualities(message: Message):
 
 
 @dp.message(F.text == "🎯 Предназначение")
-async def numerology_purpose(message: Message):
+async def numerology_purpose(message: Message, state: FSMContext):
     await save_user(message.from_user)
     user_id = message.from_user.id
 
@@ -495,8 +494,8 @@ async def numerology_purpose(message: Message):
         await no_access_message(message)
         return
 
-    clear_user_waiting_states(user_id)
-    awaiting_purpose_date.add(user_id)
+    await state.clear()
+    await state.set_state(NumerologyStates.awaiting_purpose_date)
 
     await message.answer(
         "🎯 <b>Предназначение</b>\n\n"
@@ -554,7 +553,6 @@ async def admin_panel(message: Message):
 
 @dp.message(F.text == "⬅️ Назад")
 async def back_to_main(message: Message):
-    clear_user_waiting_states(message.from_user.id)
 
     await message.answer(
         "Главное меню",
@@ -713,7 +711,7 @@ async def promo_five_spreads(message: Message, state: FSMContext):
 
 
 @dp.message(F.text == "✨ Напомнить про личные качества")
-async def promo_personal_qualities(message: Message):
+async def promo_personal_qualities(message: Message, state: FSMContext):
     if message.from_user.id != ADMIN_ID:
         return
 
@@ -762,7 +760,7 @@ async def promo_personal_qualities(message: Message):
 
 
 @dp.message(F.text == "❤️ Напомнить про совместимость")
-async def promo_compatibility(message: Message):
+async def promo_compatibility(message: Message, state: FSMContext):
     if message.from_user.id != ADMIN_ID:
         return
 
@@ -1053,239 +1051,236 @@ async def cancel_broadcast(message: Message, state: FSMContext):
     await message.answer("❌ Рассылка отменена.", reply_markup=admin_keyboard)
 
 
-@dp.message()
-async def fallback(message: Message):
+
+@dp.message(NumerologyStates.awaiting_destiny_number_date)
+async def process_destiny_number_date(message: Message, state: FSMContext):
     user_id = message.from_user.id
 
-    if user_id in awaiting_destiny_number_date:
-        awaiting_destiny_number_date.remove(user_id)
+    try:
+        data = calculate_destiny_number(message.text)
+    except ValueError as e:
+        await message.answer(f"⚠️ {e}\\n\\nПопробуйте ещё раз в формате ДД.ММ.ГГГГ")
+        return
 
-        try:
-            data = calculate_destiny_number(message.text)
-        except ValueError as e:
-            await message.answer(f"⚠️ {e}\n\nПопробуйте ещё раз в формате ДД.ММ.ГГГГ")
-            clear_user_waiting_states(user_id)
-            awaiting_destiny_number_date.add(user_id)
-            return
+    await message.answer("🔢 Рассчитываю число судьбы...")
 
-        await message.answer("🔢 Рассчитываю число судьбы...")
+    try:
+        await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+        interpretation = await interpret_destiny_number(data)
+    except Exception as e:
+        await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
+        return
 
-        try:
-            await bot.send_chat_action(chat_id=message.chat.id, action="typing")
-            interpretation = await interpret_destiny_number(data)
-        except Exception as e:
-            await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
-            return
+    await save_spread(
+        user_id=user_id,
+        spread_type="Число судьбы",
+        question=data["birth_date"],
+        cards=[],
+        answer=interpretation
+    )
 
-        await save_spread(
-            user_id=user_id,
-            spread_type="Число судьбы",
-            question=data["birth_date"],
-            cards=[],
-            answer=interpretation
-        )
+    await charge_user_for_spread(user_id)
 
-        await charge_user_for_spread(user_id)
+    await message.answer(
+        f"🔢 <b>Число судьбы</b>\n\n"
+        f"📅 Дата рождения: <b>{data['birth_date']}</b>\n"
+        f"🔢 Число судьбы: <b>{data['number']}</b>\n\n"
+        f"━━━━━━━━━━\n\n"
+        f"{markdown_bold_to_html(interpretation)}",
+        parse_mode="HTML"
+    )
 
+    await state.clear()
+
+
+@dp.message(NumerologyStates.awaiting_life_path_date)
+async def process_life_path_date(message: Message, state: FSMContext):
+    user_id = message.from_user.id
+
+    try:
+        data = calculate_life_path_number(message.text)
+    except ValueError as e:
+        await message.answer(f"⚠️ {e}\\n\\nПопробуйте ещё раз в формате ДД.ММ.ГГГГ")
+        return
+
+    await message.answer("🛣 Рассчитываю число жизненного пути...")
+
+    try:
+        await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+        interpretation = await interpret_life_path(data)
+    except Exception as e:
+        await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
+        return
+
+    await save_spread(
+        user_id=user_id,
+        spread_type="Число жизненного пути",
+        question=data["birth_date"],
+        cards=[],
+        answer=interpretation
+    )
+
+    await charge_user_for_spread(user_id)
+
+    await message.answer(
+        f"🛣 <b>Число жизненного пути</b>\n\n"
+        f"📅 Дата рождения: <b>{data['birth_date']}</b>\n"
+        f"🛣 Число жизненного пути: <b>{data['number']}</b>\n\n"
+        f"━━━━━━━━━━\n\n"
+        f"{markdown_bold_to_html(interpretation)}",
+        parse_mode="HTML"
+    )
+
+    await state.clear()
+
+
+@dp.message(NumerologyStates.awaiting_compatibility_dates)
+async def process_compatibility_dates(message: Message, state: FSMContext):
+    user_id = message.from_user.id
+    dates = [line.strip() for line in message.text.splitlines() if line.strip()]
+
+    if len(dates) != 2:
         await message.answer(
-            f"🔢 <b>Число судьбы</b>\n\n"
-            f"📅 Дата рождения: <b>{data['birth_date']}</b>\n"
-            f"🔢 Число судьбы: <b>{data['number']}</b>\n\n"
-            f"━━━━━━━━━━\n\n"
-            f"{markdown_bold_to_html(interpretation)}",
-            parse_mode="HTML"
+            "⚠️ Нужно ввести ровно две даты, каждую с новой строки.\n\n"
+            "ДД.ММ.ГГГГ\n"
+            "ДД.ММ.ГГГГ"
         )
         return
 
-    if user_id in awaiting_life_path_date:
-        awaiting_life_path_date.remove(user_id)
-
-        try:
-            data = calculate_life_path_number(message.text)
-        except ValueError as e:
-            await message.answer(f"⚠️ {e}\n\nПопробуйте ещё раз в формате ДД.ММ.ГГГГ")
-            clear_user_waiting_states(user_id)
-            awaiting_life_path_date.add(user_id)
-            return
-
-        await message.answer("🛣 Рассчитываю число жизненного пути...")
-
-        try:
-            await bot.send_chat_action(chat_id=message.chat.id, action="typing")
-            interpretation = await interpret_life_path(data)
-        except Exception as e:
-            await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
-            return
-
-        await save_spread(
-            user_id=user_id,
-            spread_type="Число жизненного пути",
-            question=data["birth_date"],
-            cards=[],
-            answer=interpretation
-        )
-
-        await charge_user_for_spread(user_id)
-
-        await message.answer(
-            f"🛣 <b>Число жизненного пути</b>\n\n"
-            f"📅 Дата рождения: <b>{data['birth_date']}</b>\n"
-            f"🛣 Число жизненного пути: <b>{data['number']}</b>\n\n"
-            f"━━━━━━━━━━\n\n"
-            f"{markdown_bold_to_html(interpretation)}",
-            parse_mode="HTML"
-        )
+    try:
+        data = calculate_compatibility(dates[0], dates[1])
+    except ValueError as e:
+        await message.answer(f"⚠️ {e}\\n\\nПопробуйте ещё раз.")
         return
 
-    if user_id in awaiting_compatibility_dates:
-        awaiting_compatibility_dates.remove(user_id)
+    await message.answer("❤️ Рассчитываю совместимость...")
 
-        dates = [line.strip() for line in message.text.splitlines() if line.strip()]
-
-        if len(dates) != 2:
-            await message.answer(
-                "⚠️ Нужно ввести ровно две даты, каждую с новой строки.\n\n"
-                "ДД.ММ.ГГГГ\n"
-                "ДД.ММ.ГГГГ"
-            )
-            clear_user_waiting_states(user_id)
-            awaiting_compatibility_dates.add(user_id)
-            return
-
-        try:
-            data = calculate_compatibility(dates[0], dates[1])
-        except ValueError as e:
-            await message.answer(f"⚠️ {e}\n\nПопробуйте ещё раз.")
-            clear_user_waiting_states(user_id)
-            awaiting_compatibility_dates.add(user_id)
-            return
-
-        await message.answer("❤️ Рассчитываю совместимость...")
-
-        try:
-            await bot.send_chat_action(chat_id=message.chat.id, action="typing")
-            interpretation = await interpret_compatibility(data)
-        except Exception as e:
-            await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
-            return
-
-        await save_spread(
-            user_id=user_id,
-            spread_type="Совместимость",
-            question=f"{data['date1']} + {data['date2']}",
-            cards=[],
-            answer=interpretation
-        )
-
-        await charge_user_for_spread(user_id)
-
-        await message.answer(
-            f"❤️ <b>Совместимость</b>\n\n"
-            f"👤 Партнер 1: <b>{data['date1']}</b> — число <b>{data['person1_number']}</b>\n"
-            f"👤 Партнер 2: <b>{data['date2']}</b> — число <b>{data['person2_number']}</b>\n"
-            f"🔢 Число пары: <b>{data['pair_number']}</b>\n\n"
-            f"━━━━━━━━━━\n\n"
-            f"{markdown_bold_to_html(interpretation)}",
-            parse_mode="HTML"
-        )
+    try:
+        await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+        interpretation = await interpret_compatibility(data)
+    except Exception as e:
+        await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
         return
 
-    if user_id in awaiting_personal_qualities_date:
-        awaiting_personal_qualities_date.remove(user_id)
+    await save_spread(
+        user_id=user_id,
+        spread_type="Совместимость",
+        question=f"{data['date1']} + {data['date2']}",
+        cards=[],
+        answer=interpretation
+    )
 
-        try:
-            data = calculate_personal_qualities(message.text)
-        except ValueError as e:
-            await message.answer(f"⚠️ {e}\n\nПопробуйте ещё раз в формате ДД.ММ.ГГГГ")
-            clear_user_waiting_states(user_id)
-            awaiting_personal_qualities_date.add(user_id)
-            return
+    await charge_user_for_spread(user_id)
 
-        await message.answer("✨ Рассчитываю личные качества...")
+    await message.answer(
+        f"❤️ <b>Совместимость</b>\n\n"
+        f"👤 Партнер 1: <b>{data['date1']}</b> — число <b>{data['person1_number']}</b>\n"
+        f"👤 Партнер 2: <b>{data['date2']}</b> — число <b>{data['person2_number']}</b>\n"
+        f"🔢 Число пары: <b>{data['pair_number']}</b>\n\n"
+        f"━━━━━━━━━━\n\n"
+        f"{markdown_bold_to_html(interpretation)}",
+        parse_mode="HTML"
+    )
 
-        try:
-            await bot.send_chat_action(chat_id=message.chat.id, action="typing")
-            interpretation = await interpret_personal_qualities(data)
-        except Exception as e:
-            await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
-            return
+    await state.clear()
 
-        await save_spread(
-            user_id=user_id,
-            spread_type="Личные качества",
-            question=data["birth_date"],
-            cards=[],
-            answer=interpretation
-        )
 
-        await charge_user_for_spread(user_id)
+@dp.message(NumerologyStates.awaiting_personal_qualities_date)
+async def process_personal_qualities_date(message: Message, state: FSMContext):
+    user_id = message.from_user.id
 
-        await message.answer(
-            f"✨ <b>Личные качества</b>\n\n"
-            f"📅 Дата рождения: <b>{data['birth_date']}</b>\n\n"
-            f"🔢 <b>Ключевые числа</b>\n"
-            f"• Число дня — <b>{data['day_number']}</b>\n"
-            f"• Число месяца — <b>{data['month_number']}</b>\n"
-            f"• Число года — <b>{data['year_number']}</b>\n"
-            f"• Число жизненного пути — <b>{data['life_path_number']}</b>\n"
-            f"• Число судьбы — <b>{data['destiny_number']}</b>\n\n"
-            f"━━━━━━━━━━\n\n"
-            f"{markdown_bold_to_html(interpretation)}",
-            parse_mode="HTML"
-        )
+    try:
+        data = calculate_personal_qualities(message.text)
+    except ValueError as e:
+        await message.answer(f"⚠️ {e}\\n\\nПопробуйте ещё раз в формате ДД.ММ.ГГГГ")
         return
 
-    if user_id in awaiting_purpose_date:
-        awaiting_purpose_date.remove(user_id)
+    await message.answer("✨ Рассчитываю личные качества...")
 
-        try:
-            data = calculate_purpose(message.text)
-        except ValueError as e:
-            await message.answer(f"⚠️ {e}\n\nПопробуйте ещё раз в формате ДД.ММ.ГГГГ")
-            clear_user_waiting_states(user_id)
-            awaiting_purpose_date.add(user_id)
-            return
-
-        await message.answer("🎯 Рассчитываю предназначение...")
-
-        try:
-            await bot.send_chat_action(chat_id=message.chat.id, action="typing")
-            interpretation = await interpret_purpose(data)
-        except Exception as e:
-            await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
-            return
-
-        await save_spread(
-            user_id=user_id,
-            spread_type="Предназначение",
-            question=data["birth_date"],
-            cards=[],
-            answer=interpretation
-        )
-
-        await charge_user_for_spread(user_id)
-
-        await message.answer(
-            f"🎯 <b>Предназначение</b>\n\n"
-            f"📅 Дата рождения: <b>{data['birth_date']}</b>\n"
-            f"🛣 Число жизненного пути: <b>{data['life_path_number']}</b>\n"
-            f"🔢 Число судьбы: <b>{data['destiny_number']}</b>\n"
-            f"🎯 Число предназначения: <b>{data['number']}</b>\n\n"
-            f"━━━━━━━━━━\n\n"
-            f"{markdown_bold_to_html(interpretation)}",
-            parse_mode="HTML"
-        )
+    try:
+        await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+        interpretation = await interpret_personal_qualities(data)
+    except Exception as e:
+        await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
         return
 
+    await save_spread(
+        user_id=user_id,
+        spread_type="Личные качества",
+        question=data["birth_date"],
+        cards=[],
+        answer=interpretation
+    )
+
+    await charge_user_for_spread(user_id)
+
+    await message.answer(
+        f"✨ <b>Личные качества</b>\n\n"
+        f"📅 Дата рождения: <b>{data['birth_date']}</b>\n\n"
+        f"🔢 <b>Ключевые числа</b>\n"
+        f"• Число дня — <b>{data['day_number']}</b>\n"
+        f"• Число месяца — <b>{data['month_number']}</b>\n"
+        f"• Число года — <b>{data['year_number']}</b>\n"
+        f"• Число жизненного пути — <b>{data['life_path_number']}</b>\n"
+        f"• Число судьбы — <b>{data['destiny_number']}</b>\n\n"
+        f"━━━━━━━━━━\n\n"
+        f"{markdown_bold_to_html(interpretation)}",
+        parse_mode="HTML"
+    )
+
+    await state.clear()
 
 
+@dp.message(NumerologyStates.awaiting_purpose_date)
+async def process_purpose_date(message: Message, state: FSMContext):
+    user_id = message.from_user.id
+
+    try:
+        data = calculate_purpose(message.text)
+    except ValueError as e:
+        await message.answer(f"⚠️ {e}\\n\\nПопробуйте ещё раз в формате ДД.ММ.ГГГГ")
+        return
+
+    await message.answer("🎯 Рассчитываю предназначение...")
+
+    try:
+        await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+        interpretation = await interpret_purpose(data)
+    except Exception as e:
+        await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
+        return
+
+    await save_spread(
+        user_id=user_id,
+        spread_type="Предназначение",
+        question=data["birth_date"],
+        cards=[],
+        answer=interpretation
+    )
+
+    await charge_user_for_spread(user_id)
+
+    await message.answer(
+        f"🎯 <b>Предназначение</b>\n\n"
+        f"📅 Дата рождения: <b>{data['birth_date']}</b>\n"
+        f"🛣 Число жизненного пути: <b>{data['life_path_number']}</b>\n"
+        f"🔢 Число судьбы: <b>{data['destiny_number']}</b>\n"
+        f"🎯 Число предназначения: <b>{data['number']}</b>\n\n"
+        f"━━━━━━━━━━\n\n"
+        f"{markdown_bold_to_html(interpretation)}",
+        parse_mode="HTML"
+    )
+
+    await state.clear()
 
 
+@dp.message()
+async def fallback(message: Message):
     await message.answer("Нажми /start чтобы открыть меню.")
 
 
 async def main():
-    init_db()
+    await init_db()
     await dp.start_polling(bot)
 
 
