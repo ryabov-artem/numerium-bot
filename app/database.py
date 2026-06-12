@@ -4,8 +4,15 @@ from datetime import datetime
 DB_FILE = "/opt/bots/numerium_bot/data/database.db"
 
 
+async def get_connection():
+    db = await aiosqlite.connect(DB_FILE, timeout=30)
+    await db.execute("PRAGMA journal_mode=WAL")
+    await db.execute("PRAGMA busy_timeout=5000")
+    return db
+
+
 async def init_db():
-    async with aiosqlite.connect(DB_FILE) as db:
+    async with get_connection() as db:
         await db.execute("""
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY,
@@ -70,7 +77,7 @@ async def ensure_payments_table():
 
 
 async def save_user(user):
-    async with aiosqlite.connect(DB_FILE) as db:
+    async with get_connection() as db:
         await db.execute("""
         INSERT OR IGNORE INTO users
         (user_id, username, first_name, created_at)
@@ -85,7 +92,7 @@ async def save_user(user):
 
 
 async def save_spread(user_id, spread_type, question, input_data, answer):
-    async with aiosqlite.connect(DB_FILE) as db:
+    async with get_connection() as db:
         await db.execute("""
         INSERT INTO spreads
         (user_id, spread_type, question, input_data, answer, created_at)
@@ -102,7 +109,7 @@ async def save_spread(user_id, spread_type, question, input_data, answer):
 
 
 async def get_user_spreads(user_id, limit=5):
-    async with aiosqlite.connect(DB_FILE) as db:
+    async with get_connection() as db:
         cursor = await db.execute("""
         SELECT id, spread_type, question, input_data, answer, created_at
         FROM spreads
@@ -126,21 +133,21 @@ async def get_user_spreads(user_id, limit=5):
 
 
 async def get_users_count():
-    async with aiosqlite.connect(DB_FILE) as db:
+    async with get_connection() as db:
         cursor = await db.execute("SELECT COUNT(*) FROM users")
         row = await cursor.fetchone()
     return row[0]
 
 
 async def get_spreads_count():
-    async with aiosqlite.connect(DB_FILE) as db:
+    async with get_connection() as db:
         cursor = await db.execute("SELECT COUNT(*) FROM spreads")
         row = await cursor.fetchone()
     return row[0]
 
 
 async def get_recent_spreads(limit=10):
-    async with aiosqlite.connect(DB_FILE) as db:
+    async with get_connection() as db:
         cursor = await db.execute("""
         SELECT
             spreads.id,
@@ -174,7 +181,7 @@ async def get_recent_spreads(limit=10):
 
 
 async def get_recent_users(limit=10):
-    async with aiosqlite.connect(DB_FILE) as db:
+    async with get_connection() as db:
         cursor = await db.execute("""
         SELECT user_id, username, first_name, created_at
         FROM users
@@ -195,7 +202,7 @@ async def get_recent_users(limit=10):
 
 
 async def can_use_free_spread(user_id):
-    async with aiosqlite.connect(DB_FILE) as db:
+    async with get_connection() as db:
         cursor = await db.execute("""
         SELECT free_spread_used
         FROM user_limits
@@ -210,7 +217,7 @@ async def can_use_free_spread(user_id):
 
 
 async def mark_free_spread_used(user_id):
-    async with aiosqlite.connect(DB_FILE) as db:
+    async with get_connection() as db:
         await db.execute("""
         INSERT OR REPLACE INTO user_limits
         (user_id, free_spread_used, paid_spreads)
@@ -231,7 +238,7 @@ async def mark_free_spread_used(user_id):
 
 
 async def get_spread_type_stats():
-    async with aiosqlite.connect(DB_FILE) as db:
+    async with get_connection() as db:
         cursor = await db.execute("""
         SELECT spread_type, COUNT(*) as count
         FROM spreads
@@ -244,7 +251,7 @@ async def get_spread_type_stats():
 
 
 async def get_all_user_ids():
-    async with aiosqlite.connect(DB_FILE) as db:
+    async with get_connection() as db:
         cursor = await db.execute("""
         SELECT user_id
         FROM users
@@ -256,7 +263,7 @@ async def get_all_user_ids():
 
 
 async def get_balance(user_id):
-    async with aiosqlite.connect(DB_FILE) as db:
+    async with get_connection() as db:
         cursor = await db.execute(
             "SELECT spreads FROM user_balance WHERE user_id = ?",
             (user_id,)
@@ -267,7 +274,7 @@ async def get_balance(user_id):
 
 
 async def add_balance(user_id, amount):
-    async with aiosqlite.connect(DB_FILE) as db:
+    async with get_connection() as db:
         await db.execute("""
         INSERT OR IGNORE INTO user_balance(user_id, spreads)
         VALUES (?, 0)
@@ -283,7 +290,7 @@ async def add_balance(user_id, amount):
 
 
 async def spend_balance(user_id):
-    async with aiosqlite.connect(DB_FILE) as db:
+    async with get_connection() as db:
         await db.execute("""
         UPDATE user_balance
         SET spreads = spreads - 1
@@ -294,7 +301,7 @@ async def spend_balance(user_id):
 
 
 async def save_payment(payment_id, user_id, amount, spreads_added):
-    async with aiosqlite.connect(DB_FILE) as db:
+    async with get_connection() as db:
         await db.execute("""
         INSERT OR IGNORE INTO payments
         (payment_id, user_id, amount, spreads_added, created_at)
@@ -310,7 +317,7 @@ async def save_payment(payment_id, user_id, amount, spreads_added):
 
 
 async def get_top_users(limit=10):
-    async with aiosqlite.connect(DB_FILE) as db:
+    async with get_connection() as db:
         cursor = await db.execute("""
         SELECT
             payments.user_id,
@@ -366,7 +373,7 @@ async def get_top_users(limit=10):
 
 
 async def get_sales_funnel():
-    async with aiosqlite.connect(DB_FILE) as db:
+    async with get_connection() as db:
         cursor = await db.execute("SELECT COUNT(*) FROM users")
         users_count = (await cursor.fetchone())[0]
 
@@ -397,7 +404,7 @@ async def get_sales_funnel():
 
 
 async def get_recent_payments(limit=10):
-    async with aiosqlite.connect(DB_FILE) as db:
+    async with get_connection() as db:
         cursor = await db.execute("""
         SELECT
             payments.payment_id,
@@ -430,7 +437,7 @@ async def get_recent_payments(limit=10):
 
 
 async def get_payments_stats():
-    async with aiosqlite.connect(DB_FILE) as db:
+    async with get_connection() as db:
         cursor = await db.execute("""
         SELECT COUNT(*), COALESCE(SUM(amount), 0), COALESCE(SUM(spreads_added), 0)
         FROM payments
