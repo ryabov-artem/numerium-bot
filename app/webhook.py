@@ -106,18 +106,19 @@ async def yookassa_webhook(request):
         return web.json_response({"ok": False, "error": "invalid_json"}, status=400)
 
     event = data.get("event")
-    obj = data.get("object", {})
+    payment_obj = data.get("object") or {}
 
     if event != "payment.succeeded":
         return web.json_response({"ok": True})
 
-    payment_id = obj.get("id")
-    metadata = obj.get("metadata") or {}
+    metadata = payment_obj.get("metadata") or {}
+    payment_id = payment_obj.get("id") or data.get("id")
+    amount_block = payment_obj.get("amount") or {}
 
     try:
         user_id = int(metadata.get("user_id"))
         count = int(metadata.get("count"))
-        amount_rub = float((obj.get("amount") or {}).get("value", 0))
+        amount_rub = float(amount_block.get("value", 0))
     except (TypeError, ValueError):
         return web.json_response({"ok": False, "error": "bad_metadata"}, status=400)
 
@@ -168,3 +169,4 @@ app.router.add_post("/yookassa/webhook", yookassa_webhook)
 
 if __name__ == "__main__":
     web.run_app(app, host="127.0.0.1", port=8083)
+
