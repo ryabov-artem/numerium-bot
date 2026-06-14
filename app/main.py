@@ -89,6 +89,26 @@ async def safe_delete_current_message(message: Message):
         pass
 
 
+async def remember_flow_message(state: FSMContext, sent_message: Message):
+    data = await state.get_data()
+    ids = data.get("flow_message_ids", [])
+    ids.append(sent_message.message_id)
+    await state.update_data(flow_message_ids=ids)
+
+
+async def cleanup_flow_messages(message: Message, state: FSMContext):
+    data = await state.get_data()
+    ids = data.get("flow_message_ids", [])
+
+    for message_id in ids:
+        try:
+            await message.bot.delete_message(message.chat.id, message_id)
+        except Exception:
+            pass
+
+    await state.update_data(flow_message_ids=[])
+
+
 class AdminStates(StatesGroup):
     awaiting_broadcast_text = State()
     awaiting_broadcast_confirm = State()
@@ -97,6 +117,8 @@ class AdminStates(StatesGroup):
 
 
 class NumerologyStates(StatesGroup):
+    awaiting_destiny_number_preview = State()
+    awaiting_destiny_number_confirm = State()
     awaiting_destiny_number_date = State()
     awaiting_life_path_date = State()
     awaiting_compatibility_dates = State()
@@ -156,6 +178,24 @@ shop_keyboard = ReplyKeyboardMarkup(
 )
 
 
+service_preview_keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="✨ Получить разбор")],
+        [KeyboardButton(text="⬅️ Назад")]
+    ],
+    resize_keyboard=True
+)
+
+
+product_confirm_keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="✅ Да")],
+        [KeyboardButton(text="⬅️ Отмена")]
+    ],
+    resize_keyboard=True
+)
+
+
 broadcast_confirm_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="✅ Отправить"), KeyboardButton(text="❌ Отмена")]
@@ -199,14 +239,38 @@ async def charge_user_for_spread(user_id):
 
 async def no_access_message(message: Message):
     await message.answer(
-        "💎 Бесплатный разбор уже использован.\n\n"
+        "💎 На балансе недостаточно разборов.\n\n"
         "Доступные тарифы:\n"
         "• 1 разбор — 99 ₽\n"
         "• 5 разборов — 299 ₽\n"
         "• 10 разборов — 499 ₽\n"
         "• 20 разборов — 799 ₽\n\n"
-        "Пополните баланс и возвращайтесь за новым разбором ✨"
+        "Пополните баланс и возвращайтесь за новым разбором ✨",
+        reply_markup=shop_keyboard
     )
+
+
+async def ask_product_confirm(message: Message, state: FSMContext, confirm_state, title: str):
+    if not await user_has_spread_access(message.from_user.id):
+        await state.clear()
+        await no_access_message(message)
+        return
+
+    balance = await get_balance(message.from_user.id)
+    free_text = " + бесплатный разбор" if await can_use_free_spread(message.from_user.id) else ""
+    balance_text = "админ-доступ ∞" if message.from_user.id == ADMIN_ID else f"{balance} разбор(ов){free_text}"
+
+    await state.set_state(confirm_state)
+
+    sent = await message.answer(
+        f"{title}\n\n"
+        f"Стоимость: <b>1</b> разбор\n"
+        f"Ваш баланс: <b>{balance_text}</b>\n\n"
+        f"Списать разбор и продолжить?",
+        parse_mode="HTML",
+        reply_markup=product_confirm_keyboard
+    )
+    await remember_flow_message(state, sent)
 
 
 @dp.message(CommandStart())
@@ -437,21 +501,73 @@ async def buy_twenty_spreads(message: Message):
 @dp.message(F.text == "🔢 Число судьбы")
 async def numerology_destiny_number(message: Message, state: FSMContext):
     await save_user(message.from_user)
-    user_id = message.from_user.id
+    await safe_delete_current_message(message)
 
-    if not await user_has_spread_access(user_id):
-        await no_access_message(message)
-        return
+    balance = await get_balance(message.from_user.id)
+    free_text = "\n🎁 Доступен бесплатный разбор" if await can_use_free_spread(message.from_user.id) else ""
 
     await state.clear()
+    await state.set_state(NumerologyStates.awaiting_destiny_number_preview)
+
+    sent = await message.answer(
+        "🔢 <b>Число судьбы</b>\n\n"
+        "Разбор базовой энергии личности по дате рождения.\n\n"
+        "<b>Что входит:</b>\n"
+        "• главное число судьбы\n"
+        "• сильные стороны\n"
+        "• особенности характера\n"
+        "• жизненные задачи\n"
+        "• мягкие рекомендации\n\n"
+        "💰 <b>Стоимость:</b> 1 разбор\n"
+        f"💎 <b>Ваш баланс:</b> {balance} разбор(ов)"
+        f"{free_text}",
+        parse_mode="HTML",
+        reply_markup=service_preview_keyboard
+    )
+    await remember_flow_message(state, sent)
+
+
+@dp.message(NumerologyStates.awaiting_destiny_number_preview, F.text == "⬅️ Назад")
+async def destiny_number_preview_back(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
+    await cleanup_flow_messages(message, state)
+    await state.clear()
+    await message.answer("Главное меню", reply_markup=get_main_keyboard(message.from_user.id))
+
+
+@dp.message(NumerologyStates.awaiting_destiny_number_preview, F.text == "✨ Получить разбор")
+async def destiny_number_preview_get(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
+    await cleanup_flow_messages(message, state)
+    await ask_product_confirm(
+        message,
+        state,
+        NumerologyStates.awaiting_destiny_number_confirm,
+        "🔢 <b>Число судьбы</b>"
+    )
+
+
+@dp.message(NumerologyStates.awaiting_destiny_number_confirm, F.text == "⬅️ Отмена")
+async def destiny_number_confirm_cancel(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
+    await cleanup_flow_messages(message, state)
+    await state.clear()
+    await message.answer("Главное меню", reply_markup=get_main_keyboard(message.from_user.id))
+
+
+@dp.message(NumerologyStates.awaiting_destiny_number_confirm, F.text == "✅ Да")
+async def destiny_number_confirm_yes(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
+    await cleanup_flow_messages(message, state)
     await state.set_state(NumerologyStates.awaiting_destiny_number_date)
 
-    await message.answer(
+    sent = await message.answer(
         "🔢 <b>Число судьбы</b>\n\n"
         "Введите дату рождения в формате:\n\n"
         "<b>ДД.ММ.ГГГГ</b>",
         parse_mode="HTML"
     )
+    await remember_flow_message(state, sent)
 
 
 @dp.message(F.text == "🛣 Число жизненного пути")
@@ -1092,6 +1208,7 @@ async def cancel_broadcast(message: Message, state: FSMContext):
 
 @dp.message(NumerologyStates.awaiting_destiny_number_date)
 async def process_destiny_number_date(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
     if not await acquire_heavy_request(message):
         return
 
@@ -1104,7 +1221,9 @@ async def process_destiny_number_date(message: Message, state: FSMContext):
             await message.answer(f"⚠️ {e}\\n\\nПопробуйте ещё раз в формате ДД.ММ.ГГГГ")
             return
 
-        await message.answer("🔢 Рассчитываю число судьбы...")
+        await cleanup_flow_messages(message, state)
+        sent = await message.answer("🔢 Рассчитываю число судьбы...")
+        await remember_flow_message(state, sent)
 
         try:
             await bot.send_chat_action(chat_id=message.chat.id, action="typing")
@@ -1123,13 +1242,16 @@ async def process_destiny_number_date(message: Message, state: FSMContext):
 
         await charge_user_for_spread(user_id)
 
+        await cleanup_flow_messages(message, state)
+
         await message.answer(
             f"🔢 <b>Число судьбы</b>\n\n"
             f"📅 Дата рождения: <b>{data['birth_date']}</b>\n"
             f"🔢 Число судьбы: <b>{data['number']}</b>\n\n"
             f"━━━━━━━━━━\n\n"
             f"{markdown_bold_to_html(interpretation)}",
-            parse_mode="HTML"
+            parse_mode="HTML",
+            reply_markup=get_main_keyboard(message.from_user.id)
         )
 
         await state.clear()
