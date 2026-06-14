@@ -4,15 +4,14 @@ from datetime import datetime
 DB_FILE = "/opt/bots/numerium_bot/data/database.db"
 
 
-async def get_connection():
-    db = await aiosqlite.connect(DB_FILE, timeout=30)
-    await db.execute("PRAGMA journal_mode=WAL")
-    await db.execute("PRAGMA busy_timeout=5000")
-    return db
+def get_connection():
+    return aiosqlite.connect(DB_FILE, timeout=30)
 
 
 async def init_db():
     async with get_connection() as db:
+        await db.execute("PRAGMA journal_mode=WAL")
+        await db.execute("PRAGMA busy_timeout=5000")
         await db.execute("""
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY,
