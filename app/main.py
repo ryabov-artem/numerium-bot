@@ -120,8 +120,15 @@ class NumerologyStates(StatesGroup):
     awaiting_destiny_number_preview = State()
     awaiting_destiny_number_confirm = State()
     awaiting_destiny_number_date = State()
+
+    awaiting_life_path_preview = State()
+    awaiting_life_path_confirm = State()
     awaiting_life_path_date = State()
+
+    awaiting_compatibility_preview = State()
+    awaiting_compatibility_confirm = State()
     awaiting_compatibility_dates = State()
+
     awaiting_personal_qualities_date = State()
     awaiting_purpose_date = State()
 
@@ -573,42 +580,139 @@ async def destiny_number_confirm_yes(message: Message, state: FSMContext):
 @dp.message(F.text == "🛣 Число жизненного пути")
 async def numerology_life_path(message: Message, state: FSMContext):
     await save_user(message.from_user)
-    user_id = message.from_user.id
+    await safe_delete_current_message(message)
 
-    if not await user_has_spread_access(user_id):
-        await no_access_message(message)
-        return
+    balance = await get_balance(message.from_user.id)
+    free_text = "\n🎁 Доступен бесплатный разбор" if await can_use_free_spread(message.from_user.id) else ""
 
     await state.clear()
+    await state.set_state(NumerologyStates.awaiting_life_path_preview)
+
+    sent = await message.answer(
+        "🛣 <b>Число жизненного пути</b>\n\n"
+        "Разбор направления жизненного пути и внутренней траектории.\n\n"
+        "<b>Что входит:</b>\n"
+        "• число жизненного пути\n"
+        "• природные склонности\n"
+        "• повторяющиеся сценарии\n"
+        "• точки роста\n"
+        "• мягкие рекомендации\n\n"
+        "💰 <b>Стоимость:</b> 1 разбор\n"
+        f"💎 <b>Ваш баланс:</b> {balance} разбор(ов)"
+        f"{free_text}",
+        parse_mode="HTML",
+        reply_markup=service_preview_keyboard
+    )
+    await remember_flow_message(state, sent)
+
+
+@dp.message(NumerologyStates.awaiting_life_path_preview, F.text == "⬅️ Назад")
+async def life_path_preview_back(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
+    await cleanup_flow_messages(message, state)
+    await state.clear()
+    await message.answer("Главное меню", reply_markup=get_main_keyboard(message.from_user.id))
+
+
+@dp.message(NumerologyStates.awaiting_life_path_preview, F.text == "✨ Получить разбор")
+async def life_path_preview_get(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
+    await cleanup_flow_messages(message, state)
+    await ask_product_confirm(
+        message,
+        state,
+        NumerologyStates.awaiting_life_path_confirm,
+        "🛣 <b>Число жизненного пути</b>"
+    )
+
+
+@dp.message(NumerologyStates.awaiting_life_path_confirm, F.text == "⬅️ Отмена")
+async def life_path_confirm_cancel(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
+    await cleanup_flow_messages(message, state)
+    await state.clear()
+    await message.answer("Главное меню", reply_markup=get_main_keyboard(message.from_user.id))
+
+
+@dp.message(NumerologyStates.awaiting_life_path_confirm, F.text == "✅ Да")
+async def life_path_confirm_yes(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
+    await cleanup_flow_messages(message, state)
     await state.set_state(NumerologyStates.awaiting_life_path_date)
 
-    await message.answer(
+    sent = await message.answer(
         "🛣 <b>Число жизненного пути</b>\n\n"
         "Введите дату рождения в формате:\n\n"
         "<b>ДД.ММ.ГГГГ</b>",
         parse_mode="HTML"
     )
+    await remember_flow_message(state, sent)
 
 
 @dp.message(F.text == "❤️ Совместимость")
 async def numerology_compatibility(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
     await save_user(message.from_user)
-    user_id = message.from_user.id
-
-    if not await user_has_spread_access(user_id):
-        await no_access_message(message)
-        return
 
     await state.clear()
+    await state.set_state(NumerologyStates.awaiting_compatibility_preview)
+
+    sent = await message.answer(
+        "❤️ <b>Совместимость</b>\n\n"
+        "Этот разбор покажет, как сочетаются две даты рождения:\n\n"
+        "• эмоциональная динамика пары\n"
+        "• сильные стороны союза\n"
+        "• возможные напряжения\n"
+        "• мягкие рекомендации для общения\n\n"
+        "Подходит для отношений, семьи, дружбы и делового партнёрства.",
+        parse_mode="HTML",
+        reply_markup=service_preview_keyboard
+    )
+    await remember_flow_message(state, sent)
+
+
+@dp.message(NumerologyStates.awaiting_compatibility_preview, F.text == "✨ Получить разбор")
+async def compatibility_preview_buy(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
+    await cleanup_flow_messages(message, state)
+    await ask_product_confirm(
+        message,
+        state,
+        NumerologyStates.awaiting_compatibility_confirm,
+        "❤️ <b>Совместимость</b>"
+    )
+
+
+@dp.message(NumerologyStates.awaiting_compatibility_preview, F.text == "⬅️ Назад")
+async def compatibility_preview_back(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
+    await cleanup_flow_messages(message, state)
+    await state.clear()
+    await message.answer("Главное меню", reply_markup=get_main_keyboard(message.from_user.id))
+
+
+@dp.message(NumerologyStates.awaiting_compatibility_confirm, F.text == "❌ Нет")
+async def compatibility_confirm_no(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
+    await cleanup_flow_messages(message, state)
+    await state.clear()
+    await message.answer("Главное меню", reply_markup=get_main_keyboard(message.from_user.id))
+
+
+@dp.message(NumerologyStates.awaiting_compatibility_confirm, F.text == "✅ Да")
+async def compatibility_confirm_yes(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
+    await cleanup_flow_messages(message, state)
     await state.set_state(NumerologyStates.awaiting_compatibility_dates)
 
-    await message.answer(
+    sent = await message.answer(
         "❤️ <b>Совместимость</b>\n\n"
         "Введите две даты рождения, каждую с новой строки:\n\n"
         "<b>ДД.ММ.ГГГГ</b>\n"
         "<b>ДД.ММ.ГГГГ</b>",
         parse_mode="HTML"
     )
+    await remember_flow_message(state, sent)
 
 
 @dp.message(F.text == "✨ Личные качества")
@@ -1265,6 +1369,7 @@ async def process_life_path_date(message: Message, state: FSMContext):
         return
 
     try:
+        await safe_delete_current_message(message)
         user_id = message.from_user.id
 
         try:
@@ -1273,7 +1378,9 @@ async def process_life_path_date(message: Message, state: FSMContext):
             await message.answer(f"⚠️ {e}\\n\\nПопробуйте ещё раз в формате ДД.ММ.ГГГГ")
             return
 
-        await message.answer("🛣 Рассчитываю число жизненного пути...")
+        await cleanup_flow_messages(message, state)
+        sent = await message.answer("🛣 Рассчитываю число жизненного пути...")
+        await remember_flow_message(state, sent)
 
         try:
             await bot.send_chat_action(chat_id=message.chat.id, action="typing")
@@ -1292,13 +1399,16 @@ async def process_life_path_date(message: Message, state: FSMContext):
 
         await charge_user_for_spread(user_id)
 
+        await cleanup_flow_messages(message, state)
+
         await message.answer(
             f"🛣 <b>Число жизненного пути</b>\n\n"
             f"📅 Дата рождения: <b>{data['birth_date']}</b>\n"
             f"🛣 Число жизненного пути: <b>{data['number']}</b>\n\n"
             f"━━━━━━━━━━\n\n"
             f"{markdown_bold_to_html(interpretation)}",
-            parse_mode="HTML"
+            parse_mode="HTML",
+            reply_markup=get_main_keyboard(message.from_user.id)
         )
 
         await state.clear()
@@ -1312,30 +1422,41 @@ async def process_compatibility_dates(message: Message, state: FSMContext):
         return
 
     try:
+        await safe_delete_current_message(message)
         user_id = message.from_user.id
         dates = [line.strip() for line in message.text.splitlines() if line.strip()]
 
         if len(dates) != 2:
-            await message.answer(
+            sent = await message.answer(
                 "⚠️ Нужно ввести ровно две даты, каждую с новой строки.\n\n"
                 "ДД.ММ.ГГГГ\n"
                 "ДД.ММ.ГГГГ"
             )
+            await remember_flow_message(state, sent)
             return
 
         try:
             data = calculate_compatibility(dates[0], dates[1])
         except ValueError as e:
-            await message.answer(f"⚠️ {e}\\n\\nПопробуйте ещё раз.")
+            sent = await message.answer(f"⚠️ {e}\\n\\nПопробуйте ещё раз.")
+            await remember_flow_message(state, sent)
             return
 
-        await message.answer("❤️ Рассчитываю совместимость...")
+        await cleanup_flow_messages(message, state)
+
+        sent = await message.answer("❤️ Рассчитываю совместимость...")
+        await remember_flow_message(state, sent)
 
         try:
             await bot.send_chat_action(chat_id=message.chat.id, action="typing")
             interpretation = await interpret_compatibility(data)
         except Exception as e:
-            await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
+            await cleanup_flow_messages(message, state)
+            await message.answer(
+                f"Не удалось подготовить разбор. Ошибка: {e}",
+                reply_markup=get_main_keyboard(message.from_user.id)
+            )
+            await state.clear()
             return
 
         await save_spread(
@@ -1347,15 +1468,17 @@ async def process_compatibility_dates(message: Message, state: FSMContext):
         )
 
         await charge_user_for_spread(user_id)
+        await cleanup_flow_messages(message, state)
 
         await message.answer(
             f"❤️ <b>Совместимость</b>\n\n"
-            f"👤 Партнер 1: <b>{data['date1']}</b> — число <b>{data['person1_number']}</b>\n"
-            f"👤 Партнер 2: <b>{data['date2']}</b> — число <b>{data['person2_number']}</b>\n"
+            f"👤 Партнёр 1: <b>{data['date1']}</b> — число <b>{data['person1_number']}</b>\n"
+            f"👤 Партнёр 2: <b>{data['date2']}</b> — число <b>{data['person2_number']}</b>\n"
             f"🔢 Число пары: <b>{data['pair_number']}</b>\n\n"
             f"━━━━━━━━━━\n\n"
             f"{markdown_bold_to_html(interpretation)}",
-            parse_mode="HTML"
+            parse_mode="HTML",
+            reply_markup=get_main_keyboard(message.from_user.id)
         )
 
         await state.clear()
