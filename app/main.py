@@ -1420,7 +1420,7 @@ async def process_destiny_number_date(message: Message, state: FSMContext):
         try:
             data = calculate_destiny_number(message.text)
         except ValueError as e:
-            await message.answer(f"⚠️ {e}\\n\\nПопробуйте ещё раз в формате ДД.ММ.ГГГГ")
+            await message.answer(f"⚠️ {e}\n\nПопробуйте ещё раз в формате ДД.ММ.ГГГГ")
             return
 
         await cleanup_flow_messages(message, state)
@@ -1473,7 +1473,7 @@ async def process_life_path_date(message: Message, state: FSMContext):
         try:
             data = calculate_life_path_number(message.text)
         except ValueError as e:
-            await message.answer(f"⚠️ {e}\\n\\nПопробуйте ещё раз в формате ДД.ММ.ГГГГ")
+            await message.answer(f"⚠️ {e}\n\nПопробуйте ещё раз в формате ДД.ММ.ГГГГ")
             return
 
         await cleanup_flow_messages(message, state)
@@ -1536,7 +1536,7 @@ async def process_compatibility_dates(message: Message, state: FSMContext):
         try:
             data = calculate_compatibility(dates[0], dates[1])
         except ValueError as e:
-            sent = await message.answer(f"⚠️ {e}\\n\\nПопробуйте ещё раз.")
+            sent = await message.answer(f"⚠️ {e}\n\nПопробуйте ещё раз.")
             await remember_flow_message(state, sent)
             return
 
@@ -1596,7 +1596,7 @@ async def process_personal_qualities_date(message: Message, state: FSMContext):
         try:
             data = calculate_personal_qualities(message.text)
         except ValueError as e:
-            sent = await message.answer(f"⚠️ {e}\\n\\nПопробуйте ещё раз в формате ДД.ММ.ГГГГ")
+            sent = await message.answer(f"⚠️ {e}\n\nПопробуйте ещё раз в формате ДД.ММ.ГГГГ")
             await remember_flow_message(state, sent)
             return
 
@@ -1660,7 +1660,7 @@ async def process_purpose_date(message: Message, state: FSMContext):
         try:
             data = calculate_purpose(message.text)
         except ValueError as e:
-            sent = await message.answer(f"⚠️ {e}\\n\\nПопробуйте ещё раз в формате ДД.ММ.ГГГГ")
+            sent = await message.answer(f"⚠️ {e}\n\nПопробуйте ещё раз в формате ДД.ММ.ГГГГ")
             await remember_flow_message(state, sent)
             return
 
