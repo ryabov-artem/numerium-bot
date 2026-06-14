@@ -82,6 +82,13 @@ def release_heavy_request(user_id: int):
     active_heavy_requests.discard(user_id)
 
 
+async def safe_delete_current_message(message: Message):
+    try:
+        await message.delete()
+    except Exception:
+        pass
+
+
 class AdminStates(StatesGroup):
     awaiting_broadcast_text = State()
     awaiting_broadcast_confirm = State()
@@ -271,6 +278,7 @@ async def admin_give_balance(message: Message):
 
 @dp.message(F.text == "💎 Баланс")
 async def balance(message: Message):
+    await safe_delete_current_message(message)
     await save_user(message.from_user)
 
     balance_count = await get_balance(message.from_user.id)
@@ -528,6 +536,7 @@ async def numerology_purpose(message: Message, state: FSMContext):
 
 @dp.message(F.text == "📜 История")
 async def history(message: Message):
+    await safe_delete_current_message(message)
     await save_user(message.from_user)
 
     spreads = await get_user_spreads(message.from_user.id, limit=5)
@@ -564,6 +573,7 @@ async def history(message: Message):
 
 @dp.message(F.text == "ℹ️ О боте")
 async def about(message: Message):
+    await safe_delete_current_message(message)
     await message.answer(
         "ℹ️ <b>О боте</b>\n\n"
         "Нумериум делает AI-разборы по <b>классической нумерологии</b>.\n\n"
@@ -576,6 +586,7 @@ async def about(message: Message):
 
 @dp.message(F.text == "⚙️ Админка")
 async def admin_panel(message: Message):
+    await safe_delete_current_message(message)
     if message.from_user.id != ADMIN_ID:
         await message.answer("Нет доступа.")
         return
@@ -585,6 +596,7 @@ async def admin_panel(message: Message):
 
 @dp.message(F.text == "⬅️ Назад")
 async def back_to_main(message: Message):
+    await safe_delete_current_message(message)
 
     await message.answer(
         "Главное меню",
