@@ -108,6 +108,8 @@ class NumerologyStates(StatesGroup):
 
 def markdown_bold_to_html(text):
     text = text.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
+    text = re.sub(r"<\s*b\s*>", "**", text, flags=re.IGNORECASE)
+    text = re.sub(r"<\s*/\s*b\s*>", "**", text, flags=re.IGNORECASE)
     text = html.escape(text, quote=False)
     text = re.sub(r"\*\*(.*?)\*\*", r"<b>\1</b>", text)
     return text
@@ -117,8 +119,7 @@ def get_main_keyboard(user_id):
         [KeyboardButton(text="🔢 Число судьбы"), KeyboardButton(text="🛣 Число жизненного пути")],
         [KeyboardButton(text="❤️ Совместимость"), KeyboardButton(text="✨ Личные качества")],
         [KeyboardButton(text="🎯 Предназначение")],
-        [KeyboardButton(text="💎 Баланс"), KeyboardButton(text="📜 История")],
-        [KeyboardButton(text="ℹ️ О боте")]
+        [KeyboardButton(text="💎 Баланс"), KeyboardButton(text="ℹ️ О боте")]
     ]
 
     if user_id == ADMIN_ID:
@@ -532,43 +533,6 @@ async def numerology_purpose(message: Message, state: FSMContext):
         "<b>ДД.ММ.ГГГГ</b>",
         parse_mode="HTML"
     )
-
-
-@dp.message(F.text == "📜 История")
-async def history(message: Message):
-    await safe_delete_current_message(message)
-    await save_user(message.from_user)
-
-    spreads = await get_user_spreads(message.from_user.id, limit=5)
-
-    if not spreads:
-        await message.answer(
-            "📜 История пока пустая.\n\n"
-            "Сделайте разбор, и он появится здесь."
-        )
-        return
-
-    text = "📜 <b>История разборов</b>\n\n"
-
-    emoji_map = {
-        "Число судьбы": "🔢",
-        "Число жизненного пути": "🛣",
-        "Совместимость": "❤️",
-        "Личные качества": "✨",
-        "Предназначение": "🎯",
-    }
-
-    for idx, spread in enumerate(spreads, start=1):
-        spread_type = spread.get("spread_type", "Разбор")
-        question = spread.get("question") or spread.get("input_data") or "—"
-        emoji = emoji_map.get(spread_type, "🔢")
-
-        text += (
-            f"{idx}. {emoji} <b>{spread_type}</b>\n"
-            f"📅 {question}\n\n"
-        )
-
-    await message.answer(text, parse_mode="HTML")
 
 
 @dp.message(F.text == "ℹ️ О боте")
