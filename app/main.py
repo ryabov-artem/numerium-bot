@@ -129,7 +129,12 @@ class NumerologyStates(StatesGroup):
     awaiting_compatibility_confirm = State()
     awaiting_compatibility_dates = State()
 
+    awaiting_personal_qualities_preview = State()
+    awaiting_personal_qualities_confirm = State()
     awaiting_personal_qualities_date = State()
+
+    awaiting_purpose_preview = State()
+    awaiting_purpose_confirm = State()
     awaiting_purpose_date = State()
 
 
@@ -691,7 +696,7 @@ async def compatibility_preview_back(message: Message, state: FSMContext):
     await message.answer("Главное меню", reply_markup=get_main_keyboard(message.from_user.id))
 
 
-@dp.message(NumerologyStates.awaiting_compatibility_confirm, F.text == "❌ Нет")
+@dp.message(NumerologyStates.awaiting_compatibility_confirm, F.text == "⬅️ Отмена")
 async def compatibility_confirm_no(message: Message, state: FSMContext):
     await safe_delete_current_message(message)
     await cleanup_flow_messages(message, state)
@@ -717,42 +722,135 @@ async def compatibility_confirm_yes(message: Message, state: FSMContext):
 
 @dp.message(F.text == "✨ Личные качества")
 async def numerology_personal_qualities(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
     await save_user(message.from_user)
-    user_id = message.from_user.id
-
-    if not await user_has_spread_access(user_id):
-        await no_access_message(message)
-        return
 
     await state.clear()
+    await state.set_state(NumerologyStates.awaiting_personal_qualities_preview)
+
+    sent = await message.answer(
+        "✨ <b>Личные качества</b>\n\n"
+        "Этот разбор покажет сильные стороны личности, внутренние особенности и мягкие зоны роста.\n\n"
+        "В разбор входят:\n"
+        "• ключевые числа даты рождения\n"
+        "• природные качества\n"
+        "• сильные стороны\n"
+        "• возможные внутренние противоречия\n"
+        "• практичные рекомендации для самопонимания",
+        parse_mode="HTML",
+        reply_markup=service_preview_keyboard
+    )
+    await remember_flow_message(state, sent)
+
+
+@dp.message(NumerologyStates.awaiting_personal_qualities_preview, F.text == "✨ Получить разбор")
+async def personal_qualities_preview_get(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
+    await cleanup_flow_messages(message, state)
+    await ask_product_confirm(
+        message,
+        state,
+        NumerologyStates.awaiting_personal_qualities_confirm,
+        "✨ <b>Личные качества</b>"
+    )
+
+
+@dp.message(NumerologyStates.awaiting_personal_qualities_preview, F.text == "⬅️ Назад")
+async def personal_qualities_preview_back(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
+    await cleanup_flow_messages(message, state)
+    await state.clear()
+    await message.answer("Главное меню", reply_markup=get_main_keyboard(message.from_user.id))
+
+
+@dp.message(NumerologyStates.awaiting_personal_qualities_confirm, F.text == "⬅️ Отмена")
+async def personal_qualities_confirm_cancel(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
+    await cleanup_flow_messages(message, state)
+    await state.clear()
+    await message.answer("Главное меню", reply_markup=get_main_keyboard(message.from_user.id))
+
+
+@dp.message(NumerologyStates.awaiting_personal_qualities_confirm, F.text == "✅ Да")
+async def personal_qualities_confirm_yes(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
+    await cleanup_flow_messages(message, state)
     await state.set_state(NumerologyStates.awaiting_personal_qualities_date)
 
-    await message.answer(
+    sent = await message.answer(
         "✨ <b>Личные качества</b>\n\n"
         "Введите дату рождения в формате:\n\n"
         "<b>ДД.ММ.ГГГГ</b>",
         parse_mode="HTML"
     )
+    await remember_flow_message(state, sent)
 
 
 @dp.message(F.text == "🎯 Предназначение")
 async def numerology_purpose(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
     await save_user(message.from_user)
-    user_id = message.from_user.id
-
-    if not await user_has_spread_access(user_id):
-        await no_access_message(message)
-        return
 
     await state.clear()
+    await state.set_state(NumerologyStates.awaiting_purpose_preview)
+
+    sent = await message.answer(
+        "🎯 <b>Предназначение</b>\n\n"
+        "Этот разбор помогает мягко посмотреть на направление развития по дате рождения.\n\n"
+        "В разбор входят:\n"
+        "• число жизненного пути\n"
+        "• число судьбы\n"
+        "• число предназначения\n"
+        "• сильные стороны реализации\n"
+        "• возможные препятствия\n"
+        "• рекомендации для движения вперёд",
+        parse_mode="HTML",
+        reply_markup=service_preview_keyboard
+    )
+    await remember_flow_message(state, sent)
+
+
+@dp.message(NumerologyStates.awaiting_purpose_preview, F.text == "✨ Получить разбор")
+async def purpose_preview_get(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
+    await cleanup_flow_messages(message, state)
+    await ask_product_confirm(
+        message,
+        state,
+        NumerologyStates.awaiting_purpose_confirm,
+        "🎯 <b>Предназначение</b>"
+    )
+
+
+@dp.message(NumerologyStates.awaiting_purpose_preview, F.text == "⬅️ Назад")
+async def purpose_preview_back(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
+    await cleanup_flow_messages(message, state)
+    await state.clear()
+    await message.answer("Главное меню", reply_markup=get_main_keyboard(message.from_user.id))
+
+
+@dp.message(NumerologyStates.awaiting_purpose_confirm, F.text == "⬅️ Отмена")
+async def purpose_confirm_cancel(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
+    await cleanup_flow_messages(message, state)
+    await state.clear()
+    await message.answer("Главное меню", reply_markup=get_main_keyboard(message.from_user.id))
+
+
+@dp.message(NumerologyStates.awaiting_purpose_confirm, F.text == "✅ Да")
+async def purpose_confirm_yes(message: Message, state: FSMContext):
+    await safe_delete_current_message(message)
+    await cleanup_flow_messages(message, state)
     await state.set_state(NumerologyStates.awaiting_purpose_date)
 
-    await message.answer(
+    sent = await message.answer(
         "🎯 <b>Предназначение</b>\n\n"
         "Введите дату рождения в формате:\n\n"
         "<b>ДД.ММ.ГГГГ</b>",
         parse_mode="HTML"
     )
+    await remember_flow_message(state, sent)
 
 
 @dp.message(F.text == "ℹ️ О боте")
@@ -1492,21 +1590,31 @@ async def process_personal_qualities_date(message: Message, state: FSMContext):
         return
 
     try:
+        await safe_delete_current_message(message)
         user_id = message.from_user.id
 
         try:
             data = calculate_personal_qualities(message.text)
         except ValueError as e:
-            await message.answer(f"⚠️ {e}\\n\\nПопробуйте ещё раз в формате ДД.ММ.ГГГГ")
+            sent = await message.answer(f"⚠️ {e}\\n\\nПопробуйте ещё раз в формате ДД.ММ.ГГГГ")
+            await remember_flow_message(state, sent)
             return
 
-        await message.answer("✨ Рассчитываю личные качества...")
+        await cleanup_flow_messages(message, state)
+
+        sent = await message.answer("✨ Рассчитываю личные качества...")
+        await remember_flow_message(state, sent)
 
         try:
             await bot.send_chat_action(chat_id=message.chat.id, action="typing")
             interpretation = await interpret_personal_qualities(data)
         except Exception as e:
-            await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
+            await cleanup_flow_messages(message, state)
+            await message.answer(
+                f"Не удалось подготовить разбор. Ошибка: {e}",
+                reply_markup=get_main_keyboard(message.from_user.id)
+            )
+            await state.clear()
             return
 
         await save_spread(
@@ -1518,6 +1626,7 @@ async def process_personal_qualities_date(message: Message, state: FSMContext):
         )
 
         await charge_user_for_spread(user_id)
+        await cleanup_flow_messages(message, state)
 
         await message.answer(
             f"✨ <b>Личные качества</b>\n\n"
@@ -1530,7 +1639,8 @@ async def process_personal_qualities_date(message: Message, state: FSMContext):
             f"• Число судьбы — <b>{data['destiny_number']}</b>\n\n"
             f"━━━━━━━━━━\n\n"
             f"{markdown_bold_to_html(interpretation)}",
-            parse_mode="HTML"
+            parse_mode="HTML",
+            reply_markup=get_main_keyboard(message.from_user.id)
         )
 
         await state.clear()
@@ -1544,21 +1654,31 @@ async def process_purpose_date(message: Message, state: FSMContext):
         return
 
     try:
+        await safe_delete_current_message(message)
         user_id = message.from_user.id
 
         try:
             data = calculate_purpose(message.text)
         except ValueError as e:
-            await message.answer(f"⚠️ {e}\\n\\nПопробуйте ещё раз в формате ДД.ММ.ГГГГ")
+            sent = await message.answer(f"⚠️ {e}\\n\\nПопробуйте ещё раз в формате ДД.ММ.ГГГГ")
+            await remember_flow_message(state, sent)
             return
 
-        await message.answer("🎯 Рассчитываю предназначение...")
+        await cleanup_flow_messages(message, state)
+
+        sent = await message.answer("🎯 Рассчитываю предназначение...")
+        await remember_flow_message(state, sent)
 
         try:
             await bot.send_chat_action(chat_id=message.chat.id, action="typing")
             interpretation = await interpret_purpose(data)
         except Exception as e:
-            await message.answer(f"Не удалось подготовить разбор. Ошибка: {e}")
+            await cleanup_flow_messages(message, state)
+            await message.answer(
+                f"Не удалось подготовить разбор. Ошибка: {e}",
+                reply_markup=get_main_keyboard(message.from_user.id)
+            )
+            await state.clear()
             return
 
         await save_spread(
@@ -1570,6 +1690,7 @@ async def process_purpose_date(message: Message, state: FSMContext):
         )
 
         await charge_user_for_spread(user_id)
+        await cleanup_flow_messages(message, state)
 
         await message.answer(
             f"🎯 <b>Предназначение</b>\n\n"
@@ -1579,7 +1700,8 @@ async def process_purpose_date(message: Message, state: FSMContext):
             f"🎯 Число предназначения: <b>{data['number']}</b>\n\n"
             f"━━━━━━━━━━\n\n"
             f"{markdown_bold_to_html(interpretation)}",
-            parse_mode="HTML"
+            parse_mode="HTML",
+            reply_markup=get_main_keyboard(message.from_user.id)
         )
 
         await state.clear()
